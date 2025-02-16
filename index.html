@@ -154,11 +154,11 @@
             const durabilityIndex = H / (ZD + ZB + ZK)*100;
 
             document.getElementById('result').textContent = 
-                `機体耐久指数: ${durabilityIndex.toFixed(2)}`;
+                `機体耐久指数: ${durabilityIndex.toFixed(0)}`;
 
             addToHistory({
                 hp: H,
-                result: durabilityIndex.toFixed(2),
+                result: durabilityIndex.toFixed(0),
                 z: Z,
                 b: B,
                 k: K
