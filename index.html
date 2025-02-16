@@ -148,10 +148,10 @@
             const hz_adjusted = hz * W;
             const hb_adjusted = hb * W;
             const hk_adjusted = hk * W;
-            const ZD = hz_adjusted * (100 - Z) ;
-            const ZB = hb_adjusted * (100 - B) ;
-            const ZK = hk_adjusted * (100 - K) ;
-            const durabilityIndex = H / (ZD + ZB + ZK);
+            const ZD = hz_adjusted * (100 - Z) /100;
+            const ZB = hb_adjusted * (100 - B) /100;
+            const ZK = hk_adjusted * (100 - K) /100;
+            const durabilityIndex = H / (ZD + ZB + ZK)*100;
 
             document.getElementById('result').textContent = 
                 `機体耐久指数: ${durabilityIndex.toFixed(2)}`;
