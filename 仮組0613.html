@@ -1,0 +1,4161 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>バトオペ2 カスタムパーツ仮組みツール</title>
+  <style>
+    body { font-family: sans-serif; margin: 24px; }
+    h2 { margin-top: 2em; }
+    table { border-collapse: collapse; margin-bottom: 1em; }
+    th, td { border: 1px solid #aaa; padding: 4px 8px; }
+    .parts-list { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+    .part-btn {
+      padding: 6px 12px;
+      border: 1px solid #888;
+      border-radius: 4px;
+      background: #f5f5f5;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .part-btn.equipped {
+      background: #ffeaea;
+      border-color: #e57373;
+      color: #c62828;
+      font-weight: bold;
+    }
+    .part-btn.equipped:hover {
+      background: #ffebee;
+    }
+    .part-btn:not(.equipped):hover {
+      background: #e3f2fd;
+    }
+    .part-btn.disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .equipped-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 240px);
+      grid-template-rows: repeat(2, 40px);
+      gap: 8px;
+      margin-bottom: 1em;
+    }
+    .slot {
+      border: 2px dashed #bbb;
+      border-radius: 6px;
+      background: #fafaff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 38px;
+      font-size: 15px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .slot.filled {
+      border: 2px solid #448aff;
+      background: #e3f2fd;
+    }
+    .slot.empty:hover {
+      background: #f0f0f0;
+    }
+    .slot.filled:hover {
+      background: #ffeaea;
+    }
+    .slot-usage-table {
+      margin-bottom: 1em;
+    }
+    .slot-usage-table th, .slot-usage-table td {
+      border: 1px solid #aaa;
+      padding: 4px 8px;
+      text-align: center;
+    }
+    .slot-usage-table input[type="number"] {
+      width: 60px;
+    }
+    .expansion-skill-select, .enhance-stage-select {
+      margin: 16px 0;
+      padding: 8px;
+      border: 1px solid #aaa;
+      border-radius: 6px;
+      background: #f8f8ff;
+      max-width: 800px;
+    }
+    .expansion-skill-select label, .enhance-stage-select label {
+      margin-right: 8px;
+      font-weight: bold;
+    }
+    .capped { color: #e53935; font-weight: bold; }
+    /* 追加効果表示用 */
+    .status-container {
+      display: flex;
+      gap: 24px;
+      align-items: flex-start;
+    }
+    .special-effects {
+      border: 1px solid #aaa;
+      padding: 16px;
+      min-width: 300px;
+      background: #f8f8ff;
+    }
+    .special-effects h3 {
+      margin-top: 0;
+      margin-bottom: 12px;
+      font-size: 1.1em;
+    }
+    .special-effect-item {
+      margin-bottom: 8px;
+      padding: 8px;
+      background: #fff;
+      border-radius: 4px;
+      border: 1px solid #ddd;
+    }
+    .special-effect-item .part-name {
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+    .special-effect-item .effect {
+      color: #555;
+      font-size: 0.9em;
+    }
+    /* モーダル用 */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0; top: 0; width: 100%; height: 100%;
+      overflow: auto;
+      background-color: rgba(0,0,0,0.4);
+    }
+    .modal-content {
+      background-color: #fefefe;
+      margin: 10% auto;
+      padding: 20px;
+      border: 1px solid #888;
+      width: 400px;
+      border-radius: 8px;
+      position: relative;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+      animation: animatetop 0.3s;
+    }
+    @keyframes animatetop {
+      from {top: -100px; opacity: 0}
+      to {top: 0; opacity: 1}
+    }
+    .close {
+      color: #aaa;
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+      position: absolute;
+      right: 16px; top: 8px;
+      cursor: pointer;
+    }
+    .close:hover { color: #444; }
+    .modal-header { margin-bottom: 12px; }
+    .modal-footer { margin-top: 16px; text-align: right; }
+    .modal-footer button {
+      padding: 6px 16px;
+      font-size: 16px;
+      border-radius: 4px;
+      border: none;
+      background: #448aff;
+      color: #fff;
+      cursor: pointer;
+      margin-left: 8px;
+    }
+    .modal-footer button:disabled {
+      background: #ccc;
+      color: #888;
+      cursor: not-allowed;
+    }
+    .modal-footer .cancel-btn {
+      background: #aaa;
+      color: #fff;
+    }
+    .modal-body table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .modal-body th, .modal-body td {
+      border: none;
+      padding: 4px 8px;
+      text-align: left;
+    }
+    .parts-categories {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .category-section {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 12px;
+      background: #f8f8ff;
+    }
+
+    .category-section h3 {
+      margin-top: 0;
+      margin-bottom: 8px;
+      color: #333;
+      font-size: 1.1em;
+    }
+
+    /* 新しいレイアウト用のスタイル */
+    .main-container {
+      display: flex;
+      gap: 24px;
+    }
+
+    .left-panel {
+      flex: 1;
+      min-width: 300px;
+    }
+
+    .right-panel {
+      flex: 1;
+      min-width: 300px;
+      max-width: 600px;
+    }
+
+    .bottom-panel {
+      margin-top: 24px;
+      width: 100%;
+    }
+
+    .status-section {
+      background: #f8f8ff;
+      padding: 16px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      margin-bottom: 16px;
+    }
+
+    .equipped-section {
+      background: #f8f8ff;
+      padding: 16px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+    }
+    /* パネル内のh2の上マージンをなくす */
+    .status-section h2 {
+      margin-top: 0;
+    }
+    .expansion-skill-row {
+      margin-bottom: 4px;
+    }
+    .expansion-skill-desc-row {
+      margin-top: 2px;
+    }
+    .compare-container {
+      margin: 20px 0;
+      padding: 16px;
+      border: 1px solid #aaa;
+      border-radius: 6px;
+      background: #f8f8ff;
+    }
+    .compare-container table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 16px;
+    }
+    .compare-container th, .compare-container td {
+      border: 1px solid #aaa;
+      padding: 4px 8px;
+      text-align: center;
+    }
+    .compare-container td:first-child {
+      text-align: left;
+    }
+    .compare-container td:nth-child(3) {
+      color: #4CAF50;
+    }
+    .compare-container td:nth-child(4) {
+      color: #4CAF50;
+    }
+
+    /* スマホ対応のためのメディアクエリ */
+    @media screen and (max-width: 768px) {
+      body {
+        margin: 12px;
+      }
+
+      /* メインコンテナを縦並びに変更 */
+      .main-container {
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      /* 左右パネルをフルワイズに */
+      .left-panel, .right-panel {
+        width: 100%;
+        max-width: 100%;
+        min-width: auto;
+      }
+
+      /* 順序を調整: 機体情報 → カスタムパーツ → 装備パーツ */
+      .right-panel {
+        order: 1;
+      }
+
+      .left-panel {
+        order: 2;
+      }
+
+      .bottom-panel {
+        order: 3;
+      }
+
+      /* 装備グリッドを縦8つに変更 */
+      .equipped-grid {
+        grid-template-columns: 1fr;
+        grid-template-rows: repeat(8, 40px);
+        max-width: 100%;
+      }
+
+      /* パーツカテゴリーの折り畳み対応 */
+      .parts-categories {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .category-section {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 0;
+        background: #f8f8ff;
+      }
+
+      .category-section h3 {
+        margin: 0;
+        padding: 12px 16px;
+        background: #e8e8f0;
+        border-radius: 8px 8px 0 0;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        user-select: none;
+        font-size: 1em;
+        border-bottom: 1px solid #ddd;
+      }
+
+      .category-section h3::after {
+        content: '▼';
+        font-size: 12px;
+        transition: transform 0.3s ease;
+        color: #666;
+      }
+
+      .category-section.collapsed h3::after {
+        transform: rotate(-90deg);
+      }
+
+      .category-section.collapsed h3 {
+        border-radius: 8px;
+        border-bottom: none;
+      }
+
+      .category-section .parts-list {
+        display: none;
+        flex-direction: column;
+        gap: 4px;
+        padding: 12px;
+        max-height: 300px;
+        overflow-y: auto;
+        animation: slideDown 0.3s ease;
+      }
+
+      .category-section:not(.collapsed) .parts-list {
+        display: flex;
+      }
+
+      @keyframes slideDown {
+        from {
+          opacity: 0;
+          max-height: 0;
+          padding-top: 0;
+          padding-bottom: 0;
+        }
+        to {
+          opacity: 1;
+          max-height: 300px;
+          padding-top: 12px;
+          padding-bottom: 12px;
+        }
+      }
+
+      /* パーツボタンのスマホ対応 */
+      .part-btn {
+        width: 100%;
+        text-align: left;
+        padding: 12px;
+        border-radius: 6px;
+        font-size: 14px;
+        min-height: 44px; /* タップしやすいサイズ */
+        display: flex;
+        align-items: center;
+      }
+
+      .part-btn.equipped {
+        background: #ffebee;
+        border-color: #e57373;
+      }
+
+      /* 機体情報テーブルのスマホ対応 */
+      .status-section table {
+        font-size: 14px;
+      }
+
+      .status-section th, .status-section td {
+        padding: 6px 4px;
+      }
+
+      .status-section input[type="number"] {
+        width: 80px;
+        padding: 4px;
+        font-size: 14px;
+      }
+
+      /* スロットテーブルのスマホ対応 */
+      .slot-usage-table {
+        font-size: 14px;
+      }
+
+      .slot-usage-table input[type="number"] {
+        width: 50px;
+      }
+
+      /* 拡張スキル・強化段階のスマホ対応 */
+      .expansion-skill-select, .enhance-stage-select {
+        padding: 12px;
+        font-size: 14px;
+      }
+
+      .expansion-skill-select select, .enhance-stage-select select {
+        font-size: 14px;
+        padding: 4px;
+      }
+
+      /* ボタンのスマホ対応 */
+      button {
+        min-height: 44px;
+        font-size: 14px;
+        padding: 8px 12px;
+      }
+
+      #clear-all-btn {
+        margin-top: 8px;
+        width: 100%;
+      }
+
+      /* 比較・保存機能のスマホ対応 */
+      .compare-container {
+        overflow-x: auto;
+        padding: 12px;
+      }
+
+      .compare-container table {
+        min-width: 600px;
+        font-size: 12px;
+      }
+
+      .damage-ratio-container {
+        overflow-x: auto;
+        padding: 12px;
+      }
+
+      .damage-ratio-container > div {
+        min-width: 300px;
+      }
+
+      .save-load-container {
+        padding: 12px;
+      }
+
+      .save-load-container > div {
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .save-load-container > div > div {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .save-load-container input, .save-load-container select {
+        margin-bottom: 8px;
+        padding: 8px;
+        font-size: 14px;
+      }
+
+      /* モーダルのスマホ対応 */
+      .modal-content {
+        width: 95%;
+        margin: 5% auto;
+        max-height: 90vh;
+        overflow-y: auto;
+      }
+
+      /* 火力指数・耐久指数エリアのスマホ対応 */
+      .damage-ratio-container > div:first-child {
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .damage-ratio-container input[type="number"] {
+        width: 60px;
+        padding: 4px;
+      }
+
+      /* 追加効果エリアのスマホ対応 */
+      .special-effects {
+        margin-top: 16px;
+      }
+
+      .special-effect-item {
+        font-size: 14px;
+        padding: 6px;
+      }
+    }
+
+  </style>
+</head>
+<body>
+<h1>バトオペ2 カスタムパーツ仮組みツール
+  <button id="info-btn" style="margin-left: 16px; padding: 8px 16px; font-size: 14px; background: #448aff; color: white; border: none; border-radius: 4px; cursor: pointer;">
+    使い方・情報
+  </button>
+</h1>
+
+  <div class="main-container">
+    <!-- 左パネル：カスタムパーツ一覧 -->
+    <div class="left-panel">
+      <h2>カスタムパーツ一覧</h2>
+      <div class="parts-categories">
+        <div class="category-section">
+          <h3>攻撃系パーツ</h3>
+          <div class="parts-list" id="parts-list-attack"></div>
+        </div>
+        <div class="category-section">
+          <h3>防御系パーツ</h3>
+          <div class="parts-list" id="parts-list-defense"></div>
+        </div>
+        <div class="category-section">
+          <h3>移動系パーツ</h3>
+          <div class="parts-list" id="parts-list-move"></div>
+        </div>
+        <div class="category-section">
+          <h3>補助系パーツ</h3>
+          <div class="parts-list" id="parts-list-auxiliary"></div>
+        </div>
+        <div class="category-section">
+          <h3>特殊系パーツ</h3>
+          <div class="parts-list" id="parts-list-special"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右パネル：機体情報、拡張スキル、強化段階、スロット、追加効果 -->
+    <div class="right-panel">
+      <div class="status-section">
+        <h2>機体情報</h2>
+        <table>
+          <tr>
+            <th>項目</th>
+            <th>基礎値</th>
+            <th>上昇値</th>
+            <th>最終値</th>
+          </tr>
+          <tr>
+            <td>機体HP</td>
+            <td><input type="number" id="base_hp" value="10000"></td>
+            <td id="hp_bonus">0</td>
+            <td id="hp_total">10000</td>
+          </tr>
+          <tr>
+            <td>耐実弾補正</td>
+            <td><input type="number" id="base_ballistic" value="20"></td>
+            <td id="ballistic_bonus">0</td>
+            <td id="ballistic_total">20</td>
+          </tr>
+          <tr>
+            <td>耐ビーム補正</td>
+            <td><input type="number" id="base_beam" value="20"></td>
+            <td id="beam_bonus">0</td>
+            <td id="beam_total">20</td>
+          </tr>
+          <tr>
+            <td>耐格闘補正</td>
+            <td><input type="number" id="base_melee" value="20"></td>
+            <td id="melee_bonus">0</td>
+            <td id="melee_total">20</td>
+          </tr>
+          <tr>
+            <td>射撃補正</td>
+            <td><input type="number" id="base_shooting" value="20"></td>
+            <td id="shooting_bonus">0</td>
+            <td id="shooting_total">20</td>
+          </tr>
+          <tr>
+            <td>格闘補正</td>
+            <td><input type="number" id="base_fighting" value="20"></td>
+            <td id="fighting_bonus">0</td>
+            <td id="fighting_total">20</td>
+          </tr>
+          <tr>
+            <td>スピード</td>
+            <td><input type="number" id="base_speed" value="130"></td>
+            <td id="speed_bonus">0</td>
+            <td id="speed_total">130</td>
+          </tr>
+          <tr>
+            <td>高速移動</td>
+            <td><input type="number" id="base_dash" value="200"></td>
+            <td id="dash_bonus">0</td>
+            <td id="dash_total">200</td>
+          </tr>
+          <tr>
+            <td>スラスター</td>
+            <td><input type="number" id="base_thruster" value="60"></td>
+            <td id="thruster_bonus">0</td>
+            <td id="thruster_total">60</td>
+          </tr>
+          <tr>
+            <td>旋回</td>
+            <td><input type="number" id="base_turn" value="60"></td>
+            <td id="turn_bonus">0</td>
+            <td id="turn_total">60</td>
+          </tr>
+          <tr>
+            <td>機体レベル</td>
+            <td><input type="number" id="base_level" value="1" min="1" style="width:60px"></td>
+            <td colspan="2"></td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- 拡張スキル選択欄 -->
+      <div class="status-section">
+        <div class="expansion-skill-select" id="expansion-skill-select">
+          <div class="expansion-skill-row">
+            <label>拡張スキル種類：</label>
+            <select id="expansionSkillType"></select>
+            <label style="margin-left:16px;">レベル：</label>
+            <select id="expansionSkillLevel"></select>
+          </div>
+          <div class="expansion-skill-desc-row">
+            <span id="expansionSkillDesc" style="color:#555;"></span>
+          </div>
+        </div>
+
+        <!-- 強化段階選択欄 -->
+        <div class="enhance-stage-select" id="enhance-stage-select">
+          <label>強化段階：</label>
+          <select id="enhanceStage">
+            <option value="0">0段階</option>
+            <option value="3">3段階</option>
+            <option value="6">6段階</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- スロット使用状況 -->
+      <div class="status-section">
+        <h2>スロット</h2>
+        <table class="slot-usage-table">
+          <tr>
+            <th></th>
+            <th>スロット数</th>
+            <th>使用中</th>
+            <th>残り</th>
+          </tr>
+          <tr>
+            <td>近距離</td>
+            <td><input type="number" id="slot_short" value="8" min="0"></td>
+            <td id="used_short">0</td>
+            <td id="remain_short">8</td>
+          </tr>
+          <tr>
+            <td>中距離</td>
+            <td><input type="number" id="slot_middle" value="8" min="0"></td>
+            <td id="used_middle">0</td>
+            <td id="remain_middle">8</td>
+          </tr>
+          <tr>
+            <td>遠距離</td>
+            <td><input type="number" id="slot_long" value="8" min="0"></td>
+            <td id="used_long">0</td>
+            <td id="remain_long">8</td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- 追加効果 -->
+      <div class="status-section">
+        <div class="special-effects">
+          <h3>追加効果</h3>
+          <div id="special-effects-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 下部パネル：装備中カスタムパーツ -->
+  <div class="bottom-panel">
+    <div class="equipped-section">
+      <h2>装備中カスタムパーツ（クリックで解除）</h2>
+      <div style="display: flex; align-items: flex-start; gap: 16px;">
+        <div class="equipped-grid" id="equipped-grid"></div>
+        <button id="clear-all-btn" style="padding: 8px 16px; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">
+          全て解除
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 火力指数・耐久指数計算 -->
+  <div class="bottom-panel">
+    <div class="damage-ratio-container" style="margin: 20px 0; padding: 16px; border: 1px solid #aaa; border-radius: 6px; background: #f8f8ff;">
+      <h3>火力指数・耐久指数計算</h3>
+      <div style="display: flex; gap: 24px;">
+        <!-- 火力指数部分 -->
+        <div style="flex: 1;">
+          <div style="margin-bottom: 16px;">
+            <label style="margin-right: 16px;">
+              射撃与ダメ割合：
+              <input type="number" id="shooting_ratio" value="50" min="0" style="width: 60px;">
+            </label>
+            <label>
+              格闘与ダメ割合：
+              <input type="number" id="fighting_ratio" value="50" min="0" style="width: 60px;">
+            </label>
+          </div>
+          <div class="power-index-display" style="padding: 12px; background: #fff; border: 1px solid #ddd; border-radius: 4px;">
+            <div style="font-weight: bold;">火力指数：<span id="power_index">0</span></div>
+          </div>
+          <button id="maximize-power-btn" style="margin-top: 8px; padding: 8px 16px; font-size: 14px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; width: 100%;">
+            火力指数最大化
+          </button>
+                  <!-- スラスター部分 -->
+        <div style="flex: 1;">
+
+          <button id="maximize-thruster-btn" style="margin-top: 8px; padding: 8px 16px; font-size: 14px; background: #FF9800; color: white; border: none; border-radius: 4px; cursor: pointer; width: 100%;">
+            スラスター最大化
+          </button>
+        </div>
+
+        </div>
+
+        <!-- 耐久指数部分 -->
+        <div style="flex: 1;">
+          <div style="margin-bottom: 16px;">
+            <label style="margin-right: 16px;">
+              実弾被ダメ割合：
+              <input type="number" id="ballistic_ratio" value="1" min="0" style="width: 60px;">
+            </label>
+            <label style="margin-right: 16px;">
+              ビーム被ダメ割合：
+              <input type="number" id="beam_ratio" value="1" min="0" style="width: 60px;">
+            </label>
+            <label>
+              格闘被ダメ割合：
+              <input type="number" id="melee_ratio" value="1" min="0" style="width: 60px;">
+            </label>
+          </div>
+          <div class="durability-index-display" style="padding: 12px; background: #fff; border: 1px solid #ddd; border-radius: 4px;">
+            <div style="font-weight: bold;">耐久指数：<span id="durability_index">0</span></div>
+          </div>
+          <button id="maximize-durability-btn" style="margin-top: 8px; padding: 8px 16px; font-size: 14px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer; width: 100%;">
+            耐久指数最大化
+          </button>
+        </div>
+
+        <!-- 被ダメ割合プリセットボタン -->
+        <div style="width: 200px;">
+          <div style="margin-bottom: 8px; font-weight: bold;">被ダメ割合プリセット</div>
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px;">
+            <button onclick="setDamageRatio(50, 10, 40)" style="padding: 4px 8px; font-size: 12px;">300</button>
+            <button onclick="setDamageRatio(50, 10, 40)" style="padding: 4px 8px; font-size: 12px;">350</button>
+            <button onclick="setDamageRatio(40, 10, 50)" style="padding: 4px 8px; font-size: 12px;">400</button>
+            <button onclick="setDamageRatio(30, 30, 40)" style="padding: 4px 8px; font-size: 12px;">450</button>
+            <button onclick="setDamageRatio(30, 30, 40)" style="padding: 4px 8px; font-size: 12px;">500</button>
+            <button onclick="setDamageRatio(25, 40, 35)" style="padding: 4px 8px; font-size: 12px;">550</button>
+            <button onclick="setDamageRatio(20, 40, 40)" style="padding: 4px 8px; font-size: 12px;">600</button>
+            <button onclick="setDamageRatio(20, 50, 30)" style="padding: 4px 8px; font-size: 12px;">650</button>
+            <button onclick="setDamageRatio(20, 50, 30)" style="padding: 4px 8px; font-size: 12px;">700</button>
+            <button onclick="setDamageRatio(20, 50, 30)" style="padding: 4px 8px; font-size: 12px;">750</button>
+            <button onclick="setDamageRatio(1, 1, 1)" style="padding: 4px 8px; font-size: 12px; grid-column: span 2;">均等</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 保存・読み込み機能 -->
+  <div class="bottom-panel">
+    <div class="save-load-container" style="margin: 20px 0; padding: 16px; border: 1px solid #aaa; border-radius: 6px; background: #f8f8ff;">
+      <h3>機体情報の保存・読み込み</h3>
+      <div style="display: flex; gap: 16px; margin-bottom: 16px;">
+        <div>
+          <input type="text" id="save-name" placeholder="保存名" style="padding: 4px 8px; margin-right: 8px;">
+          <button id="save-btn" style="padding: 4px 8px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;">
+            保存
+          </button>
+        </div>
+        <div>
+          <select id="load-select" style="padding: 4px 8px; margin-right: 8px;">
+            <option value="">保存データを選択</option>
+          </select>
+          <button id="load-btn" style="padding: 4px 8px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer;">
+            読み込み
+          </button>
+          <button id="delete-btn" style="padding: 4px 8px; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer;">
+            削除
+          </button>
+          <button id="delete-all-btn" style="padding: 4px 8px; background: #d32f2f; color: white; border: none; border-radius: 4px; cursor: pointer;">
+            全て削除
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 比較機能 -->
+  <div class="bottom-panel">
+    <div class="compare-container" style="margin: 20px 0; padding: 16px; border: 1px solid #aaa; border-radius: 6px; background: #f8f8ff;">
+      <h3>機体情報の比較</h3>
+      <div style="display: flex; gap: 16px; margin-bottom: 16px;">
+        <div>
+          <select id="compare-select-1" style="padding: 4px 8px; margin-right: 8px;">
+            <option value="">比較データ1を選択</option>
+          </select>
+        </div>
+        <div>
+          <select id="compare-select-2" style="padding: 4px 8px; margin-right: 8px;">
+            <option value="">比較データ2を選択</option>
+          </select>
+        </div>
+        <button id="compare-btn" style="padding: 4px 8px; background: #9C27B0; color: white; border: none; border-radius: 4px; cursor: pointer;">
+          比較
+        </button>
+      </div>
+      <div id="compare-result" style="display: none;">
+        <h4>比較結果</h4>
+        <div id="compare-content"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- モーダル -->
+  <div id="part-modal" class="modal">
+    <div class="modal-content">
+      <span class="close" id="modal-close">&times;</span>
+      <div class="modal-header">
+        <h3 id="modal-part-name"></h3>
+      </div>
+      <div class="modal-body" id="modal-body">
+        <!-- 効果・スロット消費をここに表示 -->
+      </div>
+      <div class="modal-footer">
+        <button id="equip-btn">装備する</button>
+        <button id="cancel-btn" class="cancel-btn">キャンセル</button>
+      </div>
+    </div>
+  </div>
+
+<!-- 情報表示モーダル -->
+<div id="info-modal" class="modal">
+  <div class="modal-content" style="width: 600px; max-height: 80vh; overflow-y: auto;">
+    <span class="close" id="info-modal-close">&times;</span>
+    <div class="modal-header">
+      <h3>バトオペ2 カスタムパーツ仮組みツール 使い方</h3>
+    </div>
+    <div class="modal-body" style="text-align: left; line-height: 1.6;">
+      
+      <h4>操作方法</h4>
+      <ul>
+        <li>エンターキーで次の入力欄にいけます。シフト＋エンターで1つ戻る。</li>
+        <li><strong>パーツ装備</strong>：パーツをクリックで詳細表示、ダブルクリックで装備</li>
+        <li><strong>パーツ解除</strong>：装備中パーツをクリックで解除</li>
+        <li><strong>未所持設定</strong>：パーツ詳細画面で「未所持」ボタンをクリック　未所持パーツは自動装備されなくなります。未所持設定は保存されます。</li>
+        <li>パーツ詳細は画面のどこをクリックしても閉じられます。</li>
+      </ul>
+      
+      <h4>火力指数・耐久指数</h4>
+      <p><strong>火力指数</strong>：射撃・格闘の与ダメージ割合を設定して計算されます</p>
+      <p><strong>耐久指数</strong>：実弾・ビーム・格闘の被ダメージ割合を設定して計算されます</p>
+      <p>「最大化」ボタンで自動的に最適なパーツを装備できます</p>
+　　　<p>※拡張装甲で空きスロットが多いと、計算にかなり時間がかかります。</p>
+      
+      <h4>保存・読み込み機能</h4>
+      <p>機体情報を保存して後で読み込むことができます。比較機能もあるよ</p>
+      
+
+      
+      <h4>更新履歴・その他</h4>
+      <p>最終更新: 2025年5月31日</p>
+      <p>そのうちスマホ対応するかも</p>
+      <p>不具合報告や要望は、XのDMまで@8LpdFhYmxHfrOV9</p>
+    </div>
+    <div class="modal-footer">
+      <button id="info-modal-ok" style="padding: 6px 16px; font-size: 16px; border-radius: 4px; border: none; background: #448aff; color: #fff; cursor: pointer;">
+        閉じる
+      </button>
+    </div>
+  </div>
+</div>
+
+
+  <script>
+    // ステータス上限値（基本値）
+    const BASE_LIMITS = {
+      ballistic: 50,  // 耐実弾補正
+      beam: 50,       // 耐ビーム補正
+      melee: 50,      // 耐格闘補正
+      shooting: 100,  // 射撃補正
+      fighting: 100,  // 格闘補正
+      speed: 200,     // スピード
+      dash: 250,      // 高速移動
+      thruster: 100, // スラスタ
+      turn: null      // 旋回（上限なし）
+    };
+
+    // 拡張スキル一覧（種類ごとにまとめる）
+    const EXPANSION_SKILL_GROUPS = [
+      {
+        type: "なし",
+        key: "",
+        levels: [
+          { key: "", name: "なし", desc: "拡張スキルなし", bonus: {}, limit: {} }
+        ]
+      },
+      {
+        type: "耐実弾補正拡張",
+        key: "ballistic",
+        levels: [
+          { key: "ballistic1", name: "Lv1", desc: "耐実弾補正+2、上限+2", bonus: { ballistic: 2 }, limit: { ballistic: 2 } },
+          { key: "ballistic2", name: "Lv2", desc: "耐実弾補正+3、上限+3", bonus: { ballistic: 3 }, limit: { ballistic: 3 } },
+          { key: "ballistic3", name: "Lv3", desc: "耐実弾補正+4、上限+4", bonus: { ballistic: 4 }, limit: { ballistic: 4 } },
+          { key: "ballistic4", name: "Lv4", desc: "耐実弾補正+6、上限+6", bonus: { ballistic: 6 }, limit: { ballistic: 6 } },
+          { key: "ballistic5", name: "Lv5", desc: "耐実弾補正+10、上限+10", bonus: { ballistic: 10 }, limit: { ballistic: 10 } }
+        ]
+      },
+     {        type: "耐ビーム補正拡張",
+        key: "beam",
+        levels: [
+          { key: "beam1", name: "Lv1", desc: "耐ビーム補正+2、上限+2", bonus: { beam: 2 }, limit: { beam: 2 } },
+          { key: "beam2", name: "Lv2", desc: "耐ビーム補正+3、上限+3", bonus: { beam: 3 }, limit: { beam: 3 } },
+          { key: "beam3", name: "Lv3", desc: "耐ビーム補正+4、上限+4", bonus: { beam: 4 }, limit: { beam: 4 } },
+          { key: "beam4", name: "Lv4", desc: "耐ビーム補正+6、上限+6", bonus: { beam: 6 }, limit: { beam: 6 } },
+          { key: "beam5", name: "Lv5", desc: "耐ビーム補正+10、上限+10", bonus: { beam: 10 }, limit: { beam: 10 } }
+        ]
+      },
+      {
+        type: "耐格闘補正拡張",
+        key: "melee",
+        levels: [
+          { key: "melee1", name: "Lv1", desc: "耐格闘補正+2、上限+2", bonus: { melee: 2 }, limit: { melee: 2 } },
+          { key: "melee2", name: "Lv2", desc: "耐格闘補正+3、上限+3", bonus: { melee: 3 }, limit: { melee: 3 } },
+          { key: "melee3", name: "Lv3", desc: "耐格闘補正+4、上限+4", bonus: { melee: 4 }, limit: { melee: 4 } },
+          { key: "melee4", name: "Lv4", desc: "耐格闘補正+6、上限+6", bonus: { melee: 6 }, limit: { melee: 6 } },
+          { key: "melee5", name: "Lv5", desc: "耐格闘補正+10、上限+10", bonus: { melee: 10 }, limit: { melee: 10 } }
+        ]
+      },
+      {
+        type: "射撃補正拡張",
+        key: "shooting",
+        levels: [
+          { key: "shooting1", name: "Lv1", desc: "射撃補正+2、上限+2", bonus: { shooting: 2 }, limit: { shooting: 2 } },
+          { key: "shooting2", name: "Lv2", desc: "射撃補正+3、上限+3", bonus: { shooting: 3 }, limit: { shooting: 3 } },
+          { key: "shooting3", name: "Lv3", desc: "射撃補正+4、上限+4", bonus: { shooting: 4 }, limit: { shooting: 4 } },
+          { key: "shooting4", name: "Lv4", desc: "射撃補正+6、上限+6", bonus: { shooting: 6 }, limit: { shooting: 6 } },
+          { key: "shooting5", name: "Lv5", desc: "射撃補正+8、上限+8", bonus: { shooting: 8 }, limit: { shooting: 8 } }
+        ]
+      },
+      {
+        type: "格闘補正拡張",
+        key: "fighting",
+        levels: [
+          { key: "fighting1", name: "Lv1", desc: "格闘補正+2、上限+2", bonus: { fighting: 2 }, limit: { fighting: 2 } },
+          { key: "fighting2", name: "Lv2", desc: "格闘補正+3、上限+3", bonus: { fighting: 3 }, limit: { fighting: 3 } },
+          { key: "fighting3", name: "Lv3", desc: "格闘補正+4、上限+4", bonus: { fighting: 4 }, limit: { fighting: 4 } },
+          { key: "fighting4", name: "Lv4", desc: "格闘補正+6、上限+6", bonus: { fighting: 6 }, limit: { fighting: 6 } },
+          { key: "fighting5", name: "Lv5", desc: "格闘補正+8、上限+8", bonus: { fighting: 8 }, limit: { fighting: 8 } }
+        ]
+      },
+      {
+        type: "スラスター拡張",
+        key: "thruster",
+        levels: [
+          { key: "thruster1", name: "Lv1", desc: "スラスター+2、上限+4", bonus: { thruster: 2 }, limit: { thruster: 4 } },
+          { key: "thruster2", name: "Lv2", desc: "スラスター+3、上限+6", bonus: { thruster: 3 }, limit: { thruster: 6 } },
+          { key: "thruster3", name: "Lv3", desc: "スラスター+4、上限+8", bonus: { thruster: 4 }, limit: { thruster: 8 } },
+          { key: "thruster4", name: "Lv4", desc: "スラスター+6、上限+12", bonus: { thruster: 6 }, limit: { thruster: 12 } },
+          { key: "thruster5", name: "Lv5", desc: "スラスター+10、上限+20", bonus: { thruster: 10 }, limit: { thruster: 20 } }
+        ]
+      },
+      {
+        type: "カスタムパーツ拡張［HP］",
+        key: "custom_hp",
+        levels: [
+          { key: "custom_hp1", name: "Lv1", desc: "「攻撃」タイプ1つごとにHP+50", category: "attackparts", effect: { hp: 50 } },
+          { key: "custom_hp2", name: "Lv2", desc: "「攻撃」タイプ1つごとにHP+100", category: "attackparts", effect: { hp: 100 } },
+          { key: "custom_hp3", name: "Lv3", desc: "「攻撃」タイプ1つごとにHP+200", category: "attackparts", effect: { hp: 200 } },
+          { key: "custom_hp4", name: "Lv4", desc: "「攻撃」タイプ1つごとにHP+300", category: "attackparts", effect: { hp: 300 } },
+          { key: "custom_hp5", name: "Lv5", desc: "「攻撃」タイプ1つごとにHP+400", category: "attackparts", effect: { hp: 400 } }
+        ]
+      },
+      {
+        type: "カスタムパーツ拡張［攻撃］",
+        key: "custom_attack",
+        levels: [
+          { key: "custom_attack1", name: "Lv1", desc: "「移動」タイプ1つごとに格闘+1, 射撃+1", category: "moveparts", effect: { fighting: 1, shooting: 1 } },
+          { key: "custom_attack2", name: "Lv2", desc: "「移動」タイプ1つごとに格闘+2, 射撃+1", category: "moveparts", effect: { fighting: 2, shooting: 1 } },
+          { key: "custom_attack3", name: "Lv3", desc: "「移動」タイプ1つごとに格闘+2, 射撃+2", category: "moveparts", effect: { fighting: 2, shooting: 2 } },
+          { key: "custom_attack4", name: "Lv4", desc: "「移動」タイプ1つごとに格闘+3, 射撃+2", category: "moveparts", effect: { fighting: 3, shooting: 2 } },
+          { key: "custom_attack5", name: "Lv5", desc: "「移動」タイプ1つごとに格闘+3, 射撃+3", category: "moveparts", effect: { fighting: 3, shooting: 3 } }
+        ]
+      },
+      {
+        type: "カスタムパーツ拡張［装甲］",
+        key: "custom_armor",
+        levels: [
+          { key: "custom_armor1", name: "Lv1", desc: "「補助」タイプ1つごとに耐実弾+1, 耐ビーム+1, 耐格闘+1", category: "auxiliaryparts", effect: { ballistic: 1, beam: 1, melee: 1 } },
+          { key: "custom_armor2", name: "Lv2", desc: "「補助」タイプ1つごとに耐実弾+2, 耐ビーム+1, 耐格闘+1", category: "auxiliaryparts", effect: { ballistic: 2, beam: 1, melee: 1 } },
+          { key: "custom_armor3", name: "Lv3", desc: "「補助」タイプ1つごとに耐実弾+2, 耐ビーム+1, 耐格闘+2", category: "auxiliaryparts", effect: { ballistic: 2, beam: 1, melee: 2 } },
+          { key: "custom_armor4", name: "Lv4", desc: "「補助」タイプ1つごとに耐実弾+2, 耐ビーム+2, 耐格闘+2", category: "auxiliaryparts", effect: { ballistic: 2, beam: 2, melee: 2 } },
+          { key: "custom_armor5", name: "Lv5", desc: "「補助」タイプ1つごとに耐実弾+3, 耐ビーム+3, 耐格闘+3", category: "auxiliaryparts", effect: { ballistic: 3, beam: 3, melee: 3 } }
+        ]
+      },
+      {
+        type: "カスタムパーツ拡張［スラスター］",
+        key: "custom_thruster",
+        levels: [
+          { key: "custom_thruster1", name: "Lv1", desc: "「特殊」タイプ1つごとにスラスター+1", category: "specialparts", effect: { thruster: 1 } },
+          { key: "custom_thruster2", name: "Lv2", desc: "「特殊」タイプ1つごとにスラスター+2", category: "specialparts", effect: { thruster: 2 } },
+          { key: "custom_thruster3", name: "Lv3", desc: "「特殊」タイプ1つごとにスラスター+3", category: "specialparts", effect: { thruster: 3 } },
+          { key: "custom_thruster4", name: "Lv4", desc: "「特殊」タイプ1つごとにスラスター+4", category: "specialparts", effect: { thruster: 4 } },
+          { key: "custom_thruster5", name: "Lv5", desc: "「特殊」タイプ1つごとにスラスター+5", category: "specialparts", effect: { thruster: 5 } }
+        ]
+        },
+    ];
+
+    // パーツデータ
+    const customParts = [
+    // 攻撃パーツ
+      { name: "射撃強化プログラムLV1", shooting: 2, slot: { short: 0, middle: 0, long: 1 }, category: "attackparts" ,useAttackParts: true},
+      { name: "射撃強化プログラムLV2", shooting: 5, slot: { short: 0, middle: 0, long: 3 }, category: "attackparts" ,useAttackParts: true},
+      { name: "射撃強化プログラムLV3", shooting: 7, slot: { short: 0, middle: 0, long: 4 }, category: "attackparts" ,useAttackParts: true},
+      { name: "射撃強化プログラムLV4", shooting: 10, slot: { short: 0, middle: 2, long: 5 }, category: "attackparts" ,useAttackParts: true},
+      { name: "射撃強化プログラムLV5", shooting: 13, slot: { short: 0, middle: 6, long: 10 }, category: "attackparts" ,useAttackParts: true},
+      { name: "格闘強化プログラムLV1", fighting: 2, slot: { short: 1, middle: 0, long: 0 }, category: "attackparts" ,useAttackParts: true},
+      { name: "格闘強化プログラムLV2", fighting: 5, slot: { short: 3, middle: 0, long: 0 }, category: "attackparts" ,useAttackParts: true},
+      { name: "格闘強化プログラムLV3", fighting: 7, slot: { short: 4, middle: 0, long: 0 }, category: "attackparts" ,useAttackParts: true},
+      { name: "格闘強化プログラムLV4", fighting: 10, slot: { short: 4, middle: 1, long: 0 }, category: "attackparts" ,useAttackParts: true},
+      { name: "格闘強化プログラムLV5", fighting: 13, slot: { short: 5, middle: 3, long: 3 }, category: "attackparts" ,useAttackParts: true},
+      { 
+        name: "オーバーチューン［射撃］LV1", 
+        slot: { short: 3, middle: 4, long: 5 }, 
+        levelEffects: { 
+          base: { shooting_damage_overtune: 1 }, 
+          perLevel: { shooting_damage_overtune: 3 }, 
+          maxBonus: { shooting_damage_overtune: 10 } 
+        }, 
+        specialEffects: [ 
+          { type: "shooting_damage_overtune", value: 1, text: "射撃ダメージが%d%増加" } 
+        ], 
+        category: "attackparts" ,useAttackParts: true
+      },
+      { name: "オーバーチューン［射撃］LV2",
+        slot: { short: 4, middle: 5, long: 3 },
+        levelEffects: {
+          base: { shooting_damage_overtune: 4 },
+          perLevel: { shooting_damage_overtune: 2 },
+          maxBonus: { shooting_damage_overtune: 10 }
+        },
+        specialEffects: [
+          { type: "shooting_damage_overtune", value: 4, text: "射撃ダメージが%d%増加" }
+        ], category: "attackparts", useAttackParts: true
+      },
+      { name: "オーバーチューン［格闘］LV1",
+        slot: { short: 5, middle: 3, long: 1 },
+        levelEffects: {
+          base: { melee_damage_overtune: 3 },
+          perLevel: { melee_damage_overtune: 3 },
+          maxBonus: { melee_damage_overtune: 12 }
+        },
+        specialEffects: [
+          { type: "melee_damage_overtune", value: 3, text: "格闘ダメージが%d%増加" }
+        ], category: "attackparts", useAttackParts: true
+      },
+      { name: "オーバーチューン［格闘］LV2",
+        slot: { short: 2, middle: 4, long: 3 },
+        levelEffects: {
+          base: { melee_damage_overtune: 6 },
+          perLevel: { melee_damage_overtune: 2 },
+          maxBonus: { melee_damage_overtune: 12 }
+        },
+        specialEffects: [
+          { type: "melee_damage_overtune", value: 6, text: "格闘ダメージが%d%増加" }
+        ], category: "attackparts", useAttackParts: true
+      },
+      {
+        name: "射撃特化プログラム",
+        slot: { short: 0, middle: 0, long: 0 },
+        hp: -1000,
+        specialEffects: [
+          { type: "shooting_damage", value: 5, text: "射撃ダメージが%d%増加" },
+          { type: "melee_damage_decrease", value: 3, text: "格闘ダメージが%d%減少" }
+        ], category: "attackparts", useAttackParts: true
+      },
+      {
+        name: "格闘特化プログラム",
+        slot: { short: 0, middle: 0, long: 0 },
+        hp: -500,
+        specialEffects: [
+          { type: "melee_damage", value: 5, text: "格闘ダメージが%d%増加" },
+          { type: "shooting_damage_decrease", value: 3, text: "射撃ダメージが%d%減少" }
+        ], category: "attackparts", useAttackParts: true
+      },
+      {
+        name: "イレギュラーDBL",
+        slot: { short: 0, middle: 1, long: 2 },
+        specialEffects: [
+          { type: "status_duration", value: 10, text: "一部の状態異常の継続時間が%d%増加" }
+        ], category: "attackparts"
+      },
+      {
+        name: "特殊燃焼剤",
+        slot: { short: 0, middle: 2, long: 2 },
+        specialEffects: [
+          { type: "burn_damage", value: 20, text: "焼夷効果によって与えるダメージが%d%増加" },
+          { type: "burn_duration", value: 10, text: "焼夷効果の継続時間が%d%増加" }
+        ], category: "attackparts"
+      },
+
+      // 防御パーツ
+      { name: "強化フレーム LV1",  hp: 200, slot: { short: 0, middle: 0, long: 1 }, category: "defparts", useDefParts: true },
+      { name: "強化フレーム LV2",  hp: 500, slot: { short: 0, middle: 0, long: 3 }, category: "defparts", useDefParts: true },
+      { name: "強化フレーム LV3",  hp: 700, slot: { short: 0, middle: 1, long: 3 }, category: "defparts", useDefParts: true },
+      { name: "強化フレーム LV4",  hp: 1000, slot: { short: 1, middle: 1, long: 3 }, category: "defparts", useDefParts: true },
+      { name: "強化フレーム LV5",  hp: 1200, slot: { short: 2, middle: 1, long: 3 }, category: "defparts" ,useDefParts: true},
+      { name: "新型フレーム LV1",  hp: 800, slot: { short: 0, middle: 5, long: 0 }, category: "defparts" ,useDefParts: true},
+      { name: "新型フレーム LV2",  hp: 1000, slot: { short: 5, middle: 2, long: 0 }, category: "defparts" ,useDefParts: true},
+      { name: "新型フレーム LV3",  hp: 1200, slot: { short: 1, middle: 2, long: 5 }, category: "defparts" ,useDefParts: true},
+      { 
+        name: "新型フレーム LV4",  
+        hp: 2400, 
+        slot: { short: 2, middle: 4, long: 6 }, 
+        category: "defparts",useDefParts: true,
+        specialEffects: [
+          { type: "repair_tool_heal", value: 15, text: "リペアツールのHP回復量が%d%上昇" }
+        ]
+      },
+      {
+        name: "シールド補強材 LV1",
+        slot: { short: 0, middle: 1, long: 0 },
+        category: "defparts",
+        specialEffects: [
+          { type: "shield_hp", value: 400, text: "シールドHPが%d増加" }
+        ]
+      },
+      {
+        name: "シールド補強材 LV2",
+        slot: { short: 0, middle: 2, long: 0 },
+        category: "defparts",
+        specialEffects: [
+          { type: "shield_hp", value: 600, text: "シールドHPが%d増加" }
+        ]
+      },
+      {
+        name: "シールド補強材 LV3",
+        slot: { short: 0, middle: 3, long: 0 },
+        category: "defparts",
+        specialEffects: [
+          { type: "shield_hp", value: 800, text: "シールドHPが%d増加" }
+        ]
+      },
+      {
+        name: "シールド補強材 LV4",
+        slot: { short: 0, middle: 4, long: 0 },
+        category: "defparts",
+        specialEffects: [
+          { type: "shield_hp", value: 1400, text: "シールドHPが%d増加" }
+        ]
+      },
+      {
+        name: "シールド補強材 LV5",
+        slot: { short: 0, middle: 5, long: 0 },
+        category: "defparts",
+        specialEffects: [
+          { type: "shield_hp", value: 1600, text: "シールドHPが%d増加" }
+        ]
+      },
+      { name: "対実弾装甲 LV1",   ballistic: 3, slot: { short: 0, middle: 1, long: 1 }, category: "defparts" ,useDefParts: true},
+      { name: "耐実弾装甲 LV2",   ballistic: 6, slot: { short: 0, middle: 2, long: 3 }, category: "defparts" ,useDefParts: true},
+      { name: "耐実弾装甲 LV3",   ballistic: 10, slot: { short: 0, middle: 0, long: 8 }, category: "defparts" ,useDefParts: true},
+      { name: "耐実弾装甲 LV4",   ballistic: 15, slot: { short: 0, middle: 9, long: 0 }, category: "defparts" ,useDefParts: true},
+      { name: "耐実弾装甲 LV5",   ballistic: 20, slot: { short: 0, middle: 9, long: 3 }, category: "defparts" ,useDefParts: true},
+      { name: "対ビーム装甲 LV1",  beam: 3, slot: { short: 0, middle: 1, long: 1 }, category: "defparts" ,useDefParts: true},
+      { name: "耐ビーム装甲 LV2",  beam: 6, slot: { short: 0, middle: 2, long: 3 }, category: "defparts" ,useDefParts: true},
+      { name: "耐ビーム装甲 LV3",  beam: 10, slot: { short: 0, middle: 0, long: 8 }, category: "defparts" ,useDefParts: true},
+      { name: "耐ビーム装甲 LV4",  beam: 15, slot: { short: 0, middle: 12, long: 0 }, category: "defparts" ,useDefParts: true},
+      { name: "耐ビーム装甲 LV5",  beam: 20, slot: { short: 0, middle: 12, long: 4 }, category: "defparts" ,useDefParts: true},
+      { name: "対格闘装甲 LV1",  melee: 3, slot: { short: 1, middle: 1, long: 0 }, category: "defparts" ,useDefParts: true},
+      { name: "耐格闘装甲 LV2",  melee: 6, slot: { short: 3, middle: 2, long: 0 }, category: "defparts" ,useDefParts: true},
+      { name: "耐格闘装甲 LV3",  melee: 10, slot: { short: 0, middle: 8, long: 0 }, category: "defparts" ,useDefParts: true},
+      { name: "耐格闘装甲 LV4",  melee: 15, slot: { short: 12, middle: 0, long: 0 }, category: "defparts" ,useDefParts: true},
+      { name: "耐格闘装甲 LV5",  melee: 20, slot: { short: 12, middle: 4, long: 0 }, category: "defparts" ,useDefParts: true},
+      {
+        name: "新型耐実弾装甲",
+        type: "新型装甲",
+        slot: { short: 3, middle: 1, long: 5 },
+        ballistic: 12,
+        limitBonus: { ballistic: 20 },
+        specialEffects: [
+          { type: "ballistic_reduction_stagger", value: 10, text: "よろけている場合、実弾属性から受けるダメージを%d%軽減" }
+        ], category: "defparts", useDefParts: true
+      },
+      {
+        name: "新型耐ビーム装甲 LV1",
+        type: "新型装甲",
+        slot: { short: 3, middle: 5, long: 9 },
+        beam: 12,
+        limitBonus: { beam: 20 },
+        specialEffects: [
+          { type: "beam_reduction_stagger", value: 10, text: "よろけている場合、ビーム属性から受けるダメージを%d%軽減" }
+        ], category: "defparts", useDefParts: true
+      },
+      {
+        name: "新型耐格闘装甲 LV1",
+        type: "新型装甲",
+        slot: { short: 5, middle: 7, long: 3 },
+        melee: 12,
+        limitBonus: { melee: 20 },
+        specialEffects: [
+          { type: "melee_reduction_stagger", value: 10, text: "よろけている場合、格闘属性から受けるダメージを%d%軽減" }
+        ], category: "defparts", useDefParts: true
+      },
+      {
+        name: "オーバーチューン［フレーム］LV1",
+        slot: { short: 3, middle: 4, long: 3 },
+        levelEffects: {
+          base: { hp: 300 },
+          perLevel: { hp: 900 },
+          maxBonus: { hp: 3000 }
+        }, category: "defparts", useDefParts: true
+      },
+      { 
+        name: "オーバーチューン［実弾装甲］LV1",
+        slot: { short: 1, middle: 0, long: 2 },
+        levelEffects: {
+          base: { ballistic_reduction_overtune: 3 },
+          perLevel: { ballistic_reduction_overtune: 4 },
+          maxBonus: { ballistic_reduction_overtune: 15 }
+        },
+        specialEffects: [
+          { type: "ballistic_reduction", value: 3, text: "実弾被ダメージを%d%軽減" }
+        ],
+        category: "defparts", useDefParts: true
+      },
+      { 
+        name: "オーバーチューン［ビーム装甲］LV1",
+        slot: { short: 5, middle: 0, long: 2 },
+        levelEffects: {
+          base: { beam_reduction_overtune: 3 },
+          perLevel: { beam_reduction_overtune: 4 },
+          maxBonus: { beam_reduction_overtune: 15 }
+        },
+        specialEffects: [
+          { type: "beam_reduction", value: 3, text: "ビーム被ダメージを%d%軽減" }
+        ],
+        category: "defparts", useDefParts: true
+      },
+      { 
+        name: "オーバーチューン［格闘装甲］LV1",
+        slot: { short: 4, middle: 1, long: 1 },
+        levelEffects: {
+          base: { melee_reduction_overtune: 3 },
+          perLevel: { melee_reduction_overtune: 4 },
+          maxBonus: { melee_reduction_overtune: 15 }
+        },
+        specialEffects: [
+          { type: "melee_reduction", value: 3, text: "格闘被ダメージを%d%軽減" }
+        ],
+        category: "defparts", useDefParts: true
+      },
+      {
+        name: "ヘビーアーマー LV1",
+        slot: { short: 5, middle: 4, long: 3 },
+        ballistic: 1,
+        beam: 1,
+        melee: 1,
+        levelEffects: {
+          base: { ballistic: 1, beam: 1, melee: 1 },
+          perLevel: { ballistic: 3, beam: 3, melee: 3 },
+          maxBonus: { ballistic: 10, beam: 10, melee: 10 }
+        },
+        category: "defparts", useDefParts: true
+      },
+      { name: "複合装甲材［Type-A］LV1", 
+        type: "複合装甲材", 
+        slot: { short: 4, middle: 4, long: 5 },
+        enhanceEffects: {
+          0: { ballistic: 4, beam: 4 },
+          3: { ballistic: 7, beam: 7 },
+          6: { ballistic: 10, beam: 10 }
+        },
+        specialEffects: [
+          { type: "repair_tool_heal", value: 10, text: "リペアツールのHP回復量が%d%上昇" }
+        ],
+        category: "defparts", useDefParts: true
+      },
+      { name: "複合装甲材［Type-B］LV1", 
+        type: "複合装甲材", 
+        slot: { short: 6, middle: 4, long: 4 },
+        enhanceEffects: {
+          0: { melee: 4, beam: 4 },
+          3: { melee: 7, beam: 7 },
+          6: { melee: 10, beam: 10 }
+        },
+        specialEffects: [
+          { type: "repair_tool_heal", value: 10, text: "リペアツールのHP回復量が%d%上昇" }
+        ],
+        category: "defparts", useDefParts: true 
+      },
+      { name: "複合装甲材［Type-C］LV1", 
+        type: "複合装甲材", 
+        slot: { short: 5, middle: 4, long: 3 },
+        enhanceEffects: {
+          0: { ballistic: 4, melee: 4 },
+          3: { ballistic: 7, melee: 7 },
+          6: { ballistic: 10, melee: 10 }
+        },
+        specialEffects: [
+          { type: "repair_tool_heal", value: 10, text: "リペアツールのHP回復量が%d%上昇" }
+        ],
+        category: "defparts", useDefParts: true 
+      },
+      {
+        name: "サイコ・パッケージ LV1",
+        slot: { short: 4, middle: 2, long: 2 },
+        hp: 1200,
+        specialEffects: [
+          { type: "psycho_damage_reduction", value: 10, text: "サイコミュ兵装から受けるダメージを%d%軽減" },
+          { type: "psycho_disable_time", value: 20, text: "敵から受けるサイコミュ兵装の使用不可時間を%d%短縮" }
+        ],
+        category: "defparts"
+      },
+      {
+        name: "新型緩衝材 LV1",
+        slot: { short: 2, middle: 4, long: 5 },
+        specialEffects: [
+          { type: "damage_reduction_buff", value: 8, text: "緩衝材系スキルの効果である機体HPへのダメージ軽減効果をさらに%d%強化" },
+          { type: "ballistic_reduction", value: 3, text: "実弾被ダメージを%d%軽減" },
+          { type: "beam_reduction", value: 3, text: "ビーム被ダメージを%d%軽減" },
+          { type: "melee_reduction", value: 3, text: "格闘被ダメージを%d%軽減" }
+        ],
+        category: "defparts"
+      },
+      {
+        name: "特殊強化フレーム［Type-A］LV1",
+        type: "特殊強化フレーム",
+        slot: { short: 3, middle: 7, long: 5 },
+        hp: 0,  
+        ballistic: 9,
+        beam: 9,
+        specialEffects: [
+          { type: "hp_percent", value: 5, text: "機体HPが%d%増加" }
+        ],
+        category: "defparts", useDefParts: true
+      },
+      {
+        name: "特殊強化フレーム［Type-B］LV1",
+        type: "特殊強化フレーム",
+        slot: { short: 11, middle: 1, long: 3 },
+        hp: 0,
+        melee: 18,
+        specialEffects: [
+          { type: "hp_percent", value: 5, text: "機体HPが%d%増加" }
+        ],
+        category: "defparts", useDefParts: true
+      },
+      {
+        name: "爆風軽減装甲 LV1",
+        slot: { short: 3, middle: 1, long: 2 },
+        ballistic: 7,
+        specialEffects: [
+          { type: "explosion_damage_reduction", value: 15, text: "兵装による爆風ダメージを%d%軽減" },
+          { type: "explosion_reaction_reduction", text: "MSの爆破によるリアクションを軽減" }
+        ],
+        category: "defparts", useDefParts: true
+      },
+
+
+      //移動パーツ
+
+      {
+        name: "高性能走行制御機構 LV1",
+        slot: { short: 4, middle: 1, long: 0 },
+        speed: 5,
+        category: "moveparts" ,type:"スピード", useAttackParts: true
+      },
+      {
+        name: "噴射制御装置 LV1",
+        slot: { short: 3, middle: 0, long: 0 },
+        thruster: 5,
+        category: "moveparts", useAttackParts: true
+      },
+      {
+        name: "噴射制御装置 LV2",
+        slot: { short: 4, middle: 0, long: 0 },
+        thruster: 7,
+        category: "moveparts", useAttackParts: true
+      },
+      {
+        name: "噴射制御装置 LV3",
+        slot: { short: 3, middle: 4, long: 0 },
+        thruster: 10,
+        category: "moveparts"
+      },
+      {
+        name: "噴射制御装置 LV4",
+        slot: { short: 6, middle: 4, long: 0 },
+        thruster: 12,
+        category: "moveparts"
+      },
+      {
+        name: "噴射制御装置 LV5",
+        slot: { short: 3, middle: 3, long: 5 },
+        thruster: 15,
+        category: "moveparts"
+      },
+      {
+        name: "大出力追加ブースター LV1",
+        slot: { short: 5, middle: 4, long: 3 },
+        dash: 5,
+        thruster: 10,
+        category: "moveparts"
+      },
+      {
+        name: "オーバーチューン［機動］ LV1",
+        slot: { short: 3, middle: 1, long: 0 },
+        levelEffects: {
+          base: { dash: 1 },
+          perLevel: { dash: 3 },
+          maxBonus: { dash: 10 }
+        },
+        category: "moveparts", useAttackParts: true
+      },
+      {
+        name: "オーバーチューン［スラスター］ LV1",
+        slot: { short: 2, middle: 3, long: 2 },
+        levelEffects: {
+          base: { thruster: 3 },
+          perLevel: { thruster: 4 },
+          maxBonus: { thruster: 15 }
+        },
+        category: "moveparts"
+      },
+      {
+        name: "運動性能強化機構 LV1",
+        slot: { short: 5, middle: 2, long: 3 },
+        speed: 10,
+        turn: 5,
+        specialEffects: [
+          { type: "leg_recovery", value: 20, text: "脚部負荷発生後の回復速度が%d%上昇" }
+        ],
+        category: "moveparts"　,type:"スピード"
+      },
+      {
+        name: "燃焼効率補助装置 LV1",
+        slot: { short: 2, middle: 2, long: 1 },
+        specialEffects: [
+          { type: "dash_consumption", value: 10, text: "高速移動開始時と高速移動のスラスター消費量を%d%軽減" }
+        ],
+        category: "moveparts", useAttackParts: true
+      },
+      {
+        name: "コンポジットモーター LV1",
+        slot: { short: 3, middle: 2, long: 5 },
+        speed: 5,
+        turn: 9,
+        specialEffects: [
+          { type: "leg_burden", value: 20, text: "ジャンプ後と高速移動後の脚部負荷を%d%軽減" }
+        ],
+        category: "moveparts" ,type:"スピード"
+      },
+      {
+        name: "高純度推進材 LV1",
+        slot: { short: 5, middle: 2, long: 4 },
+        thruster: 15,
+        limitBonus: { thruster: 10 },
+        specialEffects: [
+          { type: "thruster_recovery", value: 10, text: "スラスターの回復速度が%d%上昇" }
+        ],
+        category: "moveparts"
+      },
+      //輔助パーツ
+
+
+      {
+        name: "冷却システム LV1",
+        slot: { short: 3, middle: 1, long: 0 },
+        thruster: 3,
+        specialEffects: [
+          { type: "thruster_recovery", value: 5, text: "スラスターの回復速度が%d%上昇" },
+          { type: "overheat", value: 1, text: "スラスターオーバーヒート時の回復時間が%d%短縮" }
+        ], category: "auxiliaryparts", useDefParts: true
+      },
+      {
+        name: "冷却システム LV2",
+        slot: { short: 6, middle: 2, long: 0 },
+        thruster: 5,
+        specialEffects: [
+          { type: "thruster_recovery", value: 10, text: "スラスターの回復速度が%d%上昇" },
+          { type: "overheat", value: 3, text: "スラスターオーバーヒート時の回復時間が%d%短縮" }
+        ], category: "auxiliaryparts", useDefParts: true
+      },
+      {
+        name: "冷却システム LV3",
+        slot: { short: 7, middle: 4, long: 0 },
+        thruster: 7,
+        specialEffects: [
+          { type: "thruster_recovery", value: 15, text: "スラスターの回復速度が%d%上昇" },
+          { type: "overheat", value: 5, text: "スラスターオーバーヒート時の回復時間が%d%短縮" }
+        ], category: "auxiliaryparts"
+      },
+      {
+        name: "冷却システム LV4",
+        slot: { short: 10, middle: 5, long: 1 },
+        thruster: 10,
+        specialEffects: [
+          { type: "thruster_recovery", value: 20, text: "スラスターの回復速度が%d%上昇" },
+          { type: "overheat", value: 7, text: "スラスターオーバーヒート時の回復時間が%d%短縮" }
+        ], category: "auxiliaryparts"
+      },
+      {
+        name: "冷却システム LV5",
+        slot: { short: 11, middle: 6, long: 1 },
+        thruster: 13,
+        specialEffects: [
+          { type: "thruster_recovery", value: 25, text: "スラスターの回復速度が%d%上昇" },
+          { type: "overheat", value: 10, text: "スラスターオーバーヒート時の回復時間が%d%短縮" }
+        ], category: "auxiliaryparts"
+      },
+      {
+        name: "強制冷却システム LV1",
+        slot: { short: 2, middle: 1, long: 0 },
+        specialEffects: [
+          { type: "overheat", value: 5, text: "スラスターオーバーヒート時の回復時間が%d%短縮" },
+          { type: "thruster_recovery", value: 3, text: "スラスターの回復速度が%d%上昇" }
+        ], category: "auxiliaryparts", useDefParts: true
+      },
+      {
+        name: "強制冷却システム LV2",
+        slot: { short: 5, middle: 3, long: 0 },
+        specialEffects: [
+          { type: "overheat", value: 10, text: "スラスターオーバーヒート時の回復時間が%d%短縮" },
+          { type: "thruster_recovery", value: 6, text: "スラスターの回復速度が%d%上昇" }
+        ], category: "auxiliaryparts", useDefParts: true
+      },      
+      {
+        name: "強制冷却システム LV3",
+        slot: { short: 7, middle: 4, long: 1 },
+        specialEffects: [
+          { type: "overheat", value: 15, text: "スラスターオーバーヒート時の回復時間が%d%短縮" },
+          { type: "thruster_recovery", value: 9, text: "スラスターの回復速度が%d%上昇" }
+        ], category: "auxiliaryparts"
+      },
+      {
+        name: "強制冷却システム LV4",
+        slot: { short: 10, middle: 5, long: 1 },
+        specialEffects: [
+          { type: "overheat", value: 20, text: "スラスターオーバーヒート時の回復時間が%d%短縮" },
+          { type: "thruster_recovery", value: 12, text: "スラスターの回復速度が%d%上昇" }
+        ], category: "auxiliaryparts"
+      },
+      {
+        name: "強制冷却システム LV5",
+        slot: { short: 11, middle: 6, long: 1 },
+        specialEffects: [
+          { type: "overheat", value: 25, text: "スラスターオーバーヒート時の回復時間が%d%短縮" },
+          { type: "thruster_recovery", value: 15, text: "スラスターの回復速度が%d%上昇" }
+        ], category: "auxiliaryparts"
+      },
+
+      {
+        name: "クイックローダー LV1",
+        slot: { short: 0, middle: 0, long: 2 },
+        specialEffects: [
+          { type: "reload_time", value: 3, text: "リロード時間 %d%短縮" }
+        ],
+        category: "auxiliaryparts", useDefParts: true
+      },
+      {
+        name: "クイックローダー LV2",
+        slot: { short: 1, middle: 4, long: 0 },
+        specialEffects: [
+          { type: "reload_time", value: 6, text: "リロード時間 %d%短縮" }
+        ],
+        category: "auxiliaryparts", useDefParts: true
+      },
+      {
+        name: "クイックローダー LV3",
+        slot: { short: 1, middle: 7, long: 0 },
+        specialEffects: [
+          { type: "reload_time", value: 10, text: "リロード時間 %d%短縮" }
+        ],
+        category: "auxiliaryparts"
+      },
+      {
+        name: "クイックローダー LV4",
+        slot: { short: 2, middle: 12, long: 0 },
+        specialEffects: [
+          { type: "reload_time", value: 15, text: "リロード時間 %d%短縮" }
+        ],
+        category: "auxiliaryparts"
+      },
+      {
+        name: "補助ジェネレーター LV1",
+        slot: { short: 0, middle: 0, long: 2 },
+        specialEffects: [
+          { type: "beam_overheat", value: 3, text: "武器のオーバーヒート時間 %d%短縮" }
+        ],
+        category: "auxiliaryparts", useDefParts: true
+      },
+      {
+        name: "補助ジェネレーター LV2",
+        slot: { short: 1, middle: 4, long: 0 },
+        specialEffects: [
+          { type: "beam_overheat", value: 6, text: "武器のオーバーヒート時間 %d%短縮" }
+        ],
+        category: "auxiliaryparts", useDefParts: true
+      },
+      {
+        name: "補助ジェネレーター LV3",
+        slot: { short: 1, middle: 7, long: 0 },
+        specialEffects: [
+          { type: "beam_overheat", value: 10, text: "武器のオーバーヒート時間 %d%短縮" }
+        ],
+        category: "auxiliaryparts"
+      },
+      {
+        name: "補助ジェネレーター LV4",
+        slot: { short: 2, middle: 10, long: 0 },
+        specialEffects: [
+          { type: "beam_overheat", value: 15, text: "武器のオーバーヒート時間 %d%短縮" }
+        ],
+        category: "auxiliaryparts"
+      },
+      {
+        name: "補助ジェネレーター LV5",
+        slot: { short: 3, middle: 14, long: 0 },
+        specialEffects: [
+          { type: "beam_overheat", value: 20, text: "武器のオーバーヒート時間 %d%短縮" }
+        ],
+        category: "auxiliaryparts"
+      },
+      {
+        name: "高精度集束リング LV1",
+        slot: { short: 0, middle: 2, long: 0 },
+        specialEffects: [
+          { type: "beam_focus", value: 3, text: "ビーム射撃兵装の集束時間が%d%短縮" }
+        ],
+        category: "auxiliaryparts", useDefParts: true
+      },
+      {
+        name: "高精度集束リング LV2",
+        slot: { short: 0, middle: 3, long: 1 },
+        specialEffects: [
+          { type: "beam_focus", value: 6, text: "ビーム射撃兵装の集束時間が%d%短縮" }
+        ],
+        category: "auxiliaryparts", useDefParts: true
+      },
+      {
+        name: "高精度集束リング LV3",
+        slot: { short: 0, middle: 6, long: 0 },
+        specialEffects: [
+          { type: "beam_focus", value: 10, text: "ビーム射撃兵装の集束時間が%d%短縮" }
+        ],
+        category: "auxiliaryparts", useDefParts: true
+      },
+
+
+      {
+        name: "AD-DCS LV1",
+        slot: { short: 0, middle: 1, long: 0 },
+        specialEffects: [
+          { type: "status_recovery", value: 20, text: "一部の状態異常の回復時間が%d%短縮", unique: true }
+        ],
+        category: "auxiliaryparts", useDefParts: true
+      },
+      {
+        name: "AD-DCS LV2",
+        slot: { short: 1, middle: 2, long: 0 },
+        specialEffects: [
+          { type: "status_recovery", value: 30, text: "一部の状態異常の回復時間が%d%短縮", unique: true }
+        ],
+        category: "auxiliaryparts", useDefParts: true
+      },
+      {
+        name: "フィールドモーター LV1",
+        slot: { short: 0, middle: 1, long: 4 },
+        turn: 5,
+        category: "auxiliaryparts", useDefParts: true
+      },
+      {
+        name: "フィールドモーター LV2",
+        slot: { short: 0, middle: 3, long: 7 },
+        turn: 10,
+        category: "auxiliaryparts"
+      },
+      {
+        name: "フィールドモーター LV3",
+        slot: { short: 8, middle: 6, long: 1 },
+        turn: 15,
+        category: "auxiliaryparts"
+      },
+
+      {
+        name: "AD-ASL LV1",
+        slot: { short: 0, middle: 1, long: 4 },
+        specialEffects: [
+          { type: "asl_range", value: 5, text: "ASL領域を%d拡張" }
+        ],
+        category: "auxiliaryparts", useDefParts: true
+      },
+      {
+        name: "AD-ASL LV2",
+        slot: { short: 0, middle: 5, long: 7 },
+        specialEffects: [
+          { type: "asl_range", value: 10, text: "ASL領域を%d拡張" }
+        ],
+        category: "auxiliaryparts"
+      },
+      {
+        name: "電子防護システム",
+        slot: { short: 2, middle: 0, long: 0 },
+        specialEffects: [
+          { type: "radar_disable_immunity", value: 1, text: "戦闘時間4分経過後に発動。機体HPが30%以上の時に攻撃及び一部のスキルによるレーダー障害を無効化" }
+        ],
+        category: "auxiliaryparts", useDefParts: true
+      },      
+      {
+        name: "大容量補給パック",
+        type: "補給パック",
+        slot: { short: 1, middle: 9, long: 3 },
+        specialEffects: [
+          { type: "reload_time", value: 15, text: "リロード時間 %d%短縮" },
+          { type: "beam_overheat", value: 15, text: "武器のオーバーヒート時間 %d%短縮" }
+        ],
+        category: "auxiliaryparts"
+      },
+
+      //特殊パーツ
+      
+    {
+      name: "脚部特殊装甲 LV1",
+      slot: { short: 3, middle: 1, long: 0 },
+      specialEffects: [
+        { type: "leg_hp_percent", value: 5, text: "「脚部HP」に充てられるHPを60%から65%に増加", unique: true },
+        { type: "leg_damage_reduction", value: 1, text: "脚部被弾時、機体HPへのダメージを%d%軽減", unique: true }
+      ],
+      category: "specialparts"
+    },
+    {
+      name: "脚部特殊装甲 LV2",
+      slot: { short: 5, middle: 2, long: 0 },
+      specialEffects: [
+        { type: "leg_hp_percent", value: 10, text: "「脚部HP」に充てられるHPを60%から70%に増加", unique: true },
+        { type: "leg_damage_reduction", value: 1, text: "脚部被弾時、機体HPへのダメージを%d%軽減", unique: true }
+      ],
+      category: "specialparts"
+    },
+    {
+      name: "脚部特殊装甲 LV3",
+      slot: { short: 5, middle: 4, long: 1 },
+      specialEffects: [
+        { type: "leg_hp_percent", value: 20, text: "「脚部HP」に充てられるHPを60%から80%に増加", unique: true },
+        { type: "leg_damage_reduction", value: 2, text: "脚部被弾時、機体HPへのダメージを%d%軽減", unique: true }
+      ],
+      category: "specialparts"
+    },
+    {
+      name: "脚部特殊装甲 LV4",
+      slot: { short: 6, middle: 5, long: 1 },
+      specialEffects: [
+        { type: "leg_hp_percent", value: 30, text: "「脚部HP」に充てられるHPを60%から90%に増加", unique: true },
+        { type: "leg_damage_reduction", value: 7, text: "脚部被弾時、機体HPへのダメージを%d%軽減", unique: true }
+      ],
+      category: "specialparts"
+    },
+    {
+      name: "頭部特殊装甲 LV1",
+      slot: { short: 0, middle: 0, long: 1 },
+      specialEffects: [
+        { type: "head_hp_percent", value: 10, text: "「頭部HP」に充てられるHPを45%から55%に増加", unique: true },
+        { type: "head_damage_reduction", value: 4, text: "頭部被弾時、機体HPへのダメージを%d%軽減", unique: true }
+      ],
+      category: "specialparts"
+    },
+    {
+      name: "頭部特殊装甲 LV2",
+      slot: { short: 0, middle: 0, long: 2 },
+      specialEffects: [
+        { type: "head_hp_percent", value: 20, text: "「頭部HP」に充てられるHPを45%から65%に増加", unique: true },
+        { type: "head_damage_reduction", value: 8, text: "頭部被弾時、機体HPへのダメージを%d%軽減", unique: true }
+      ],
+      category: "specialparts"
+    },
+    {
+      name: "頭部特殊装甲 LV3",
+      slot: { short: 0, middle: 0, long: 4 },
+      specialEffects: [
+        { type: "head_hp_percent", value: 30, text: "「頭部HP」に充てられるHPを45%から75%に増加", unique: true },
+        { type: "head_damage_reduction", value: 12, text: "頭部被弾時、機体HPへのダメージを%d%軽減", unique: true }
+      ],
+      category: "specialparts"
+    },
+    {
+      name: "背部特殊装甲 LV1",
+      slot: { short: 1, middle: 0, long: 0 },
+      specialEffects: [
+        { type: "back_hp_percent", value: 10, text: "「背部HP」に充てられるHPを30%から40%に増加", unique: true },
+        { type: "back_damage_reduction", value: 2, text: "背部被弾時、機体HPへのダメージを%d%軽減", unique: true }
+      ],
+      category: "specialparts"
+    },
+    {
+      name: "背部特殊装甲 LV2",
+      slot: { short: 2, middle: 0, long: 0 },
+      specialEffects: [
+        { type: "back_hp_percent", value: 25, text: "「背部HP」に充てられるHPを30%から55%に増加", unique: true },
+        { type: "back_damage_reduction", value: 6, text: "背部被弾時、機体HPへのダメージを%d%軽減", unique: true }
+      ],
+      category: "specialparts"
+    },
+    {
+      name: "背部特殊装甲 LV3",
+      slot: { short: 4, middle: 0, long: 0 },
+      specialEffects: [
+        { type: "back_hp_percent", value: 40, text: "「背部HP」に充てられるHPを30%から70%に増加", unique: true },
+        { type: "back_damage_reduction", value: 10, text: "背部被弾時、機体HPへのダメージを%d%軽減", unique: true }
+      ],
+      category: "specialparts"
+    },
+      {
+        name: "データベースリンクLV1",
+        slot: { short: 0, middle: 1, long: 2 },
+        specialEffect: "脚部、頭部、背部への部位ダメージ量が3%増加",
+        category: "specialparts"                                
+      },
+      {
+        name: "データベースリンクLV2",
+        slot: { short: 0, middle: 2, long: 4 },
+        specialEffect: "脚部、頭部、背部への部位ダメージ量が6%増加",
+        category: "specialparts"                                
+      },
+      {
+        name: "スペースドフレーム LV1",
+        slot: { short: 1, middle: 3, long: 1 },
+        hp: 200,
+        thruster: 3,
+        category: "specialparts"
+      },
+      {
+        name: "スペースドフレーム LV2",
+        slot: { short: 1, middle: 1, long: 4 },
+        hp: 400,
+        thruster: 5,
+        category: "specialparts"
+      },
+      {
+        name: "スペースドフレーム LV3",
+        slot: { short: 5, middle: 1, long: 1 },
+        hp: 600,
+        thruster: 7,
+        category: "specialparts"
+      },
+      {
+        name: "スペースドフレーム LV4",
+        slot: { short: 4, middle: 0, long: 4 },
+        hp: 1000,
+        thruster: 8,
+        category: "specialparts"
+      },
+      { name: "スペースドアーマー LV1",thruster: 4, ballistic: 4, beam: 4, melee: 4, slot: { short: 4, middle: 2, long: 3 }, category: "specialparts", useDefParts: true },
+
+      {
+        name: "サイコフレーム",
+        slot: { short: 2, middle: 2, long: 3 },
+        turn: 3,
+        specialEffects: [
+          { type: "lockon", value: 25, text: "サイコミュ兵装のロックオン時間が%d%短縮" },
+          { type: "ballistic_reduction", value: 3, text: "実弾被ダメージを%d%軽減" },
+          { type: "beam_reduction", value: 3, text: "ビーム被ダメージを%d%軽減" },
+          { type: "melee_reduction", value: 3, text: "格闘被ダメージを%d%軽減" }
+        ], category: "specialparts" ,useDefParts: true
+      },      
+
+      {
+        name: "教育型コンピューター LV1",
+        slot: { short: 4, middle: 4, long: 6 },
+        specialEffects: [
+          { type: "shooting_damage", value: 5.5, text: "射撃ダメージが%d%増加" },
+          { type: "melee_damage", value: 5.5, text: "格闘ダメージが%d%増加" },
+          { type: "ballistic_reduction", value: 5.5, text: "実弾被ダメージを%d%軽減" },
+          { type: "beam_reduction", value: 5.5, text: "ビーム被ダメージを%d%軽減" },
+          { type: "melee_reduction", value: 5.5, text: "格闘被ダメージを%d%軽減" }          
+        ],
+        category: "specialparts", useDefParts: true, useAttackParts: true
+      },
+      { name: "複合フレーム［Type-A］LV1", 
+      type: "複合フレーム", 
+      slot: { short: 2, middle: 4, long: 3 },
+      enhanceEffects: {
+        0: { hp: 200, shooting: 2 },
+        3: { hp: 500, shooting: 5 },
+        6: { hp: 1000, shooting: 10 }
+      },
+      specialEffects: [
+        { type: "repair_tool_heal", value: 15, text: "リペアツールのHP回復量が%d%上昇" }
+      ],
+      category: "specialparts", useAttackParts: true
+    },
+    { name: "複合フレーム［Type-B］LV1", 
+    type: "複合フレーム", 
+    slot: { short: 3, middle: 4, long: 2 },
+    enhanceEffects: {
+      0: { hp: 200, fighting: 2 },
+      3: { hp: 500, fighting: 5 },
+      6: { hp: 1000, fighting: 10 }
+    },
+    specialEffects: [
+      { type: "repair_tool_heal", value: 15, text: "リペアツールのHP回復量が%d%上昇" }
+    ],
+    category: "specialparts", useAttackParts: true
+  },
+  {
+    name: "水中戦適正化装置 LV1",
+    slot: { short: 4, middle: 3, long: 2 },
+    specialEffect: "本パーツを装備した機体に対して「水中適正」を付与する。さらに水中におけるスラスター消費量を軽減し、スラスターのオーバーヒート回復時間とビーム兵装のオーバーヒート回復速度が、より強化される。",
+    category: "specialparts"
+  },
+  {
+    name: "射撃攻防プログラム LV1",
+    slot: { short: 2, middle: 2, long: 5 },
+    specialEffects: [
+      { type: "ballistic_reduction", value: 5, text: "実弾被ダメージを%d%軽減" },
+      { type: "beam_reduction", value: 5, text: "ビーム被ダメージを%d%軽減" }
+    ],
+    category: "specialparts"
+  },
+  {
+    name: "格闘攻防プログラム LV1",
+    slot: { short: 4, middle: 2, long: 2 },
+    fighting: 5,
+    specialEffects: [
+      { type: "melee_reduction", value: 10, text: "格闘被ダメージを%d%軽減" }
+    ],
+    category: "specialparts"
+  },
+  {
+    name: "総合強化プログラム［格闘］LV1",
+    slot: { short: 3, middle: 3, long: 1 },
+    levelEffects: {
+      base: { fighting: 1, melee: 1, dash: 1, thruster: 1, turn: 1 },
+      perLevel: { fighting: 1, melee: 1, dash: 1, thruster: 1, turn: 1 },
+      maxBonus: { fighting: 5, melee: 5, dash: 5, thruster: 5, turn: 5 }
+    },
+    category: "specialparts"
+  },
+      {
+        name: "特殊強化装置［Type-α］",
+        slot: { short: 4, middle: 3, long: 2 },
+        hp: 1000,
+        type: "特殊強化装置",
+        category: "specialparts",
+        useAttackParts: true,
+        specialEffects: [
+          { type: "fighting_percent", value: 20, text: "格闘補正が%d%増加" }
+        ]
+      },  
+  {
+    name: "カテゴリ特攻プログラム［支援］",
+    slot: { short: 2, middle: 4, long: 4 },
+    specialEffects: [
+      { type: "ballistic_reduction", value: 5, text: "実弾被ダメージを%d%軽減" },
+      { type: "beam_reduction", value: 5, text: "ビーム被ダメージを%d%軽減" },
+      { type: "melee_reduction", value: 5, text: "格闘被ダメージを%d%軽減" }
+    ],
+    specialEffect: "支援機のみ装備可能。汎用機へのダメージを130%から140%に(火力指数非対応)。",
+    category: "specialparts"
+  },
+  {
+    name: "カテゴリ特攻プログラム［汎用］",
+    slot: { short: 4, middle: 1, long: 4 },
+    hp: 2000,
+    specialEffect: "汎用機のみ装備可能。強襲機へのダメージを130%から140%に(火力指数非対応)。",
+    category: "specialparts", useDefParts: true
+  },
+    ];
+
+    let equipped = Array(8).fill(null);
+    let selectedPart = null;
+    let selectedExpansionSkill = EXPANSION_SKILL_GROUPS[0].levels[0];
+    let lastSelectedLevelName = "Lv1"; // 直前に選択していたレベル名を記憶
+
+    // --- 強化段階取得 ---
+    function getEnhanceStage() {
+      return Number(document.getElementById('enhanceStage').value) || 0;
+    }
+
+    // --- 拡張スキル2段階ドロップダウン ---
+    const typeSelect = document.getElementById('expansionSkillType');
+    const levelSelect = document.getElementById('expansionSkillLevel');
+    const descSpan = document.getElementById('expansionSkillDesc');
+
+    function populateSkillType() {
+      typeSelect.innerHTML = "";
+      EXPANSION_SKILL_GROUPS.forEach((group) => {
+        const opt = document.createElement('option');
+        opt.value = group.key;
+        opt.textContent = group.type;
+        typeSelect.appendChild(opt);
+      });
+    }
+
+    function populateSkillLevel() {
+      levelSelect.innerHTML = "";
+      const group = EXPANSION_SKILL_GROUPS.find(g => g.key === typeSelect.value) || EXPANSION_SKILL_GROUPS[0];
+      group.levels.forEach((level) => {
+        const opt = document.createElement('option');
+        opt.value = level.key;
+        opt.textContent = level.name;
+        levelSelect.appendChild(opt);
+      });
+
+      // 直前のレベル名が新しい種類にもあればそれを選択、なければLv1
+      let found = false;
+      for (let i = 0; i < group.levels.length; i++) {
+        if (group.levels[i].name === lastSelectedLevelName) {
+          levelSelect.selectedIndex = i;
+          found = true;
+          break;
+        }
+      }
+      if (!found) levelSelect.selectedIndex = 0;
+    }
+
+    typeSelect.onchange = function() {
+      lastSelectedLevelName = levelSelect.options[levelSelect.selectedIndex]?.textContent || "Lv1";
+      populateSkillLevel();
+      updateExpansionSkill();
+    };
+    levelSelect.onchange = function() {
+      lastSelectedLevelName = levelSelect.options[levelSelect.selectedIndex]?.textContent || "Lv1";
+      updateExpansionSkill();
+    };
+
+    function updateExpansionSkill() {
+      const group = EXPANSION_SKILL_GROUPS.find(g => g.key === typeSelect.value) || EXPANSION_SKILL_GROUPS[0];
+      const level = group.levels.find(l => l.key === levelSelect.value) || group.levels[0];
+      selectedExpansionSkill = level;
+      descSpan.textContent = level.desc;
+      updateStatus();
+    }
+
+    // 初期化
+    populateSkillType();
+    populateSkillLevel();
+    updateExpansionSkill();
+
+    // --- パーツ一覧 ---
+    const partsListDiv = document.getElementById('parts-list');
+    function renderPartsList() {
+      // 各カテゴリーのパーツリストをクリア
+      document.getElementById('parts-list-attack').innerHTML = '';
+      document.getElementById('parts-list-defense').innerHTML = '';
+      document.getElementById('parts-list-move').innerHTML = '';
+      document.getElementById('parts-list-auxiliary').innerHTML = '';
+      document.getElementById('parts-list-special').innerHTML = '';
+
+      customParts.forEach((part) => {
+        // 同じtypeのパーツが既に装備されている場合は装備不可
+        if (part.type && equipped.some(e => e && e.type === part.type)) {
+          // 既に装備中の場合のみ解除可
+          if (!equipped.includes(part)) {
+            const btn = document.createElement('button');
+            btn.className = 'part-btn';
+            btn.textContent = part.name;
+            btn.disabled = true;
+            btn.title = `${part.type}系パーツは複数装備できません`;
+            getCategoryList(part.category).appendChild(btn);
+            return;
+          }
+        }
+
+        // 補給パックとクイックローダー/補助ジェネレーターの同時装備制限
+        if (part.type === "補給パック" && equipped.some(e => e && (e.name.includes("クイックローダー") || e.name.includes("補助ジェネレーター")))) {
+          if (!equipped.includes(part)) {
+            const btn = document.createElement('button');
+            btn.className = 'part-btn';
+            btn.textContent = part.name;
+            btn.disabled = true;
+            btn.title = "クイックローダーまたは補助ジェネレーターと同時装備できません";
+            getCategoryList(part.category).appendChild(btn);
+            return;
+          }
+        }
+        if ((part.name.includes("クイックローダー") || part.name.includes("補助ジェネレーター")) && 
+            equipped.some(e => e && e.type === "補給パック")) {
+          if (!equipped.includes(part)) {
+            const btn = document.createElement('button');
+            btn.className = 'part-btn';
+            btn.textContent = part.name;
+            btn.disabled = true;
+            btn.title = "大容量補給パックと同時装備できません";
+            getCategoryList(part.category).appendChild(btn);
+            return;
+          }
+        }
+            // 運動性能強化機構LV1とコンポジットモーターLV1の同時装備制限
+    if ((part.name === "運動性能強化機構 LV1" || part.name === "コンポジットモーター LV1") && 
+        equipped.some(e => e && (e.name === "フィールドモーター LV1" || e.name === "フィールドモーター LV2" || e.name === "フィールドモーター LV3" || 
+                                e.name === "サイコフレーム" || e.name === "総合強化プログラム［格闘］LV1"))) {
+      if (!equipped.includes(part)) {
+        const btn = document.createElement('button');
+        btn.className = 'part-btn';
+        btn.textContent = part.name;
+        btn.disabled = true;
+        btn.title = "フィールドモーター、サイコフレーム、総合強化プログラム［格闘］LV1と同時装備できません";
+        getCategoryList(part.category).appendChild(btn);
+        return;
+      }
+    }
+    if ((part.name === "フィールドモーター LV1" || part.name === "フィールドモーター LV2" || part.name === "フィールドモーター LV3" || 
+         part.name === "サイコフレーム" || part.name === "総合強化プログラム［格闘］LV1") && 
+        equipped.some(e => e && (e.name === "運動性能強化機構 LV1" || e.name === "コンポジットモーター LV1"))) {
+      if (!equipped.includes(part)) {
+        const btn = document.createElement('button');
+        btn.className = 'part-btn';
+        btn.textContent = part.name;
+        btn.disabled = true;
+        btn.title = "運動性能強化機構LV1またはコンポジットモーターLV1と同時装備できません";
+        getCategoryList(part.category).appendChild(btn);
+        return;
+      }
+    }
+
+        const btn = document.createElement('button');
+        btn.className = 'part-btn';
+        btn.textContent = part.name;
+        const isEquipped = equipped.includes(part);
+
+        // スロット制限のチェック
+        const slotShort = Number(document.getElementById('slot_short').value) || 0;
+        const slotMiddle = Number(document.getElementById('slot_middle').value) || 0;
+        const slotLong = Number(document.getElementById('slot_long').value) || 0;
+        const used = getUsedSlots();
+        const canEquipSlots = 
+          (used.short + part.slot.short <= slotShort) &&
+          (used.middle + part.slot.middle <= slotMiddle) &&
+          (used.long + part.slot.long <= slotLong);
+
+        if (isEquipped) {
+          btn.classList.add('equipped');
+          btn.title = "クリックで装備から外す";
+          btn.onclick = () => {
+            equipped[equipped.findIndex(e => e === part)] = null;
+            renderEquipped();
+            renderPartsList();
+            updateStatus();
+          };
+        } else {
+          if (!canEquipSlots) {
+            btn.classList.add('disabled');
+            btn.title = "スロット数が足りません";
+          } else {
+            btn.title = "クリックで詳細表示、ダブルクリックで装備";
+          }
+          let clickTimer = null;
+          btn.onclick = () => {
+            if (clickTimer === null) {
+              clickTimer = setTimeout(() => {
+                clickTimer = null;
+                openPartModal(part);
+              }, 200);
+            }
+          };
+          btn.ondblclick = () => {
+            if (!canEquipSlots) return; // 未所持でも装備可能にするため、ownedPartsのチェックを削除
+            clearTimeout(clickTimer);
+            clickTimer = null;
+            let canEquip =
+              !equipped.includes(part) &&
+              equipped.filter(e => e).length < 8 &&
+              !(part.type && equipped.some(e => e && e.type === part.type)) &&
+              // 補給パックとクイックローダー/補助ジェネレーターの同時装備制限をチェック
+              !(part.type === "補給パック" && equipped.some(e => e && (e.name.includes("クイックローダー") || e.name.includes("補助ジェネレーター")))) &&
+              !((part.name.includes("クイックローダー") || part.name.includes("補助ジェネレーター")) && equipped.some(e => e && e.type === "補給パック"));
+            
+            if (canEquip) {
+              const emptyIdx = equipped.findIndex(e => e === null);
+              if (emptyIdx !== -1) {
+                equipped[emptyIdx] = part;
+                renderEquipped();
+                renderPartsList();
+                updateStatus();
+              }
+            }
+          };
+        }
+        getCategoryList(part.category).appendChild(btn);
+      });
+    }
+
+    // カテゴリーに応じたパーツリストの要素を取得
+    function getCategoryList(category) {
+      switch(category) {
+        case 'attackparts':
+          return document.getElementById('parts-list-attack');
+        case 'defparts':
+          return document.getElementById('parts-list-defense');
+        case 'moveparts':
+          return document.getElementById('parts-list-move');
+        case 'auxiliaryparts':
+          return document.getElementById('parts-list-auxiliary');
+        case 'specialparts':
+          return document.getElementById('parts-list-special');
+        default:
+          return document.getElementById('parts-list-attack');
+      }
+    }
+
+    // --- モーダル ---
+    function openPartModal(part) {
+      selectedPart = part;
+      document.getElementById('modal-part-name').textContent = part.name;
+      
+      // 効果量があるステータスのみを表示するためのHTMLを生成
+      let statsHtml = '';
+      if (getPartEffect(part, 'hp')) statsHtml += `<tr><th>HP</th><td>+${getPartEffect(part, 'hp')}</td></tr>`;
+      if (getPartEffect(part, 'ballistic')) statsHtml += `<tr><th>耐実弾補正</th><td>+${getPartEffect(part, 'ballistic')}</td></tr>`;
+      if (getPartEffect(part, 'beam')) statsHtml += `<tr><th>耐ビーム補正</th><td>+${getPartEffect(part, 'beam')}</td></tr>`;
+      if (getPartEffect(part, 'melee')) statsHtml += `<tr><th>耐格闘補正</th><td>+${getPartEffect(part, 'melee')}</td></tr>`;
+      if (getPartEffect(part, 'shooting')) statsHtml += `<tr><th>射撃補正</th><td>+${getPartEffect(part, 'shooting')}</td></tr>`;
+      if (getPartEffect(part, 'fighting')) statsHtml += `<tr><th>格闘補正</th><td>+${getPartEffect(part, 'fighting')}</td></tr>`;
+      if (getPartEffect(part, 'speed')) statsHtml += `<tr><th>スピード</th><td>+${getPartEffect(part, 'speed')}</td></tr>`;
+      if (getPartEffect(part, 'dash')) statsHtml += `<tr><th>高速移動</th><td>+${getPartEffect(part, 'dash')}</td></tr>`;
+      if (getPartEffect(part, 'thruster')) statsHtml += `<tr><th>スラスター</th><td>+${getPartEffect(part, 'thruster')}</td></tr>`;
+      if (getPartEffect(part, 'turn')) statsHtml += `<tr><th>旋回</th><td>+${getPartEffect(part, 'turn')}</td></tr>`;
+      
+      // 追加効果を表示
+      if (part.specialEffect) {
+        statsHtml += `<tr><th>追加効果</th><td>${part.specialEffect}</td></tr>`;
+      }
+      if (part.specialEffects) {
+        part.specialEffects.forEach(effect => {
+          let value = effect.value;
+          // レベル依存の効果の場合、現在の効果量を計算
+          if (part.levelEffects && part.levelEffects.base[effect.type]) {
+            value = getPartEffect(part, effect.type);
+          }
+          statsHtml += `<tr><th>追加効果</th><td>${effect.text.replace('%d', value)}</td></tr>`;
+        });
+      }
+
+      // スロット消費は常に表示
+      statsHtml += `<tr><th>スロット消費</th><td>近距離:${part.slot.short}　中距離:${part.slot.middle}　遠距離:${part.slot.long}</td></tr>`;
+      
+      document.getElementById('modal-body').innerHTML = `<table>${statsHtml}</table>`;
+
+      // 既存の未所持ボタンがあれば削除
+      let existingModalNotOwnedBtn = document.getElementById('modal-not-owned-btn');
+      if (existingModalNotOwnedBtn) {
+          existingModalNotOwnedBtn.remove();
+      }
+
+      // 未所持ボタンを追加
+      const notOwnedBtn = document.createElement('button');
+      notOwnedBtn.id = 'modal-not-owned-btn'; // IDを付与
+      notOwnedBtn.textContent = '未所持';
+      notOwnedBtn.style.marginRight = '8px';
+      notOwnedBtn.style.padding = '4px 8px';
+      notOwnedBtn.style.backgroundColor = ownedParts[part.name] ? '#f5f5f5' : '#f44336';
+      notOwnedBtn.style.color = ownedParts[part.name] ? '#666' : 'white';
+      notOwnedBtn.style.border = '1px solid #ddd';
+      notOwnedBtn.style.borderRadius = '4px';
+      notOwnedBtn.style.cursor = 'pointer';
+      notOwnedBtn.style.opacity = ownedParts[part.name] ? '0.5' : '1';
+      notOwnedBtn.onclick = () => {
+        toggleOwnedPart(part.name);
+        notOwnedBtn.style.backgroundColor = ownedParts[part.name] ? '#f5f5f5' : '#f44336';
+        notOwnedBtn.style.color = ownedParts[part.name] ? '#666' : 'white';
+        notOwnedBtn.style.opacity = ownedParts[part.name] ? '0.5' : '1';
+      };
+
+      // モーダルのフッターに未所持ボタンを追加
+      const modalFooter = document.querySelector('.modal-footer');
+      modalFooter.insertBefore(notOwnedBtn, modalFooter.firstChild);
+
+      // スロット制限のチェック
+      const slotShort = Number(document.getElementById('slot_short').value) || 0;
+      const slotMiddle = Number(document.getElementById('slot_middle').value) || 0;
+      const slotLong = Number(document.getElementById('slot_long').value) || 0;
+      const used = getUsedSlots();
+      let canEquip =
+        (used.short + part.slot.short <= slotShort) &&
+        (used.middle + part.slot.middle <= slotMiddle) &&
+        (used.long + part.slot.long <= slotLong) &&
+        !equipped.includes(part) &&
+        equipped.filter(e => e).length < 8 &&
+        !(part.type && equipped.some(e => e && e.type === part.type)) &&
+        // 補給パックとクイックローダー/補助ジェネレーターの同時装備制限をチェック
+        !(part.type === "補給パック" && equipped.some(e => e && (e.name.includes("クイックローダー") || e.name.includes("補助ジェネレーター")))) &&
+        !((part.name.includes("クイックローダー") || part.name.includes("補助ジェネレーター")) && equipped.some(e => e && e.type === "補給パック"));
+
+      document.getElementById('equip-btn').disabled = !canEquip;
+      document.getElementById('part-modal').style.display = 'block';
+    }
+
+    function closeModal() {
+      document.getElementById('part-modal').style.display = 'none';
+      selectedPart = null;
+    }
+    document.getElementById('modal-close').onclick = closeModal;
+    document.getElementById('cancel-btn').onclick = closeModal;
+
+    document.getElementById('equip-btn').onclick = function() {
+      if (!selectedPart) return;
+      const slotShort = Number(document.getElementById('slot_short').value) || 0;
+      const slotMiddle = Number(document.getElementById('slot_middle').value) || 0;
+      const slotLong = Number(document.getElementById('slot_long').value) || 0;
+      const used = getUsedSlots();
+      let canEquip =
+        (used.short + selectedPart.slot.short <= slotShort) &&
+        (used.middle + selectedPart.slot.middle <= slotMiddle) &&
+        (used.long + selectedPart.slot.long <= slotLong) &&
+        !equipped.includes(selectedPart) &&
+        equipped.filter(e => e).length < 8 &&
+        !(selectedPart.type && equipped.some(e => e && e.type === selectedPart.type)); // 同じtypeのパーツが装備されていないことを確認
+      if (!canEquip) return;
+      const emptyIdx = equipped.findIndex(e => e === null);
+      if (emptyIdx !== -1) {
+        equipped[emptyIdx] = selectedPart;
+        renderEquipped();
+        renderPartsList();
+        updateStatus();
+        closeModal();
+      }
+    };
+
+    // --- 装備枠 ---
+    const equippedGrid = document.getElementById('equipped-grid');
+    function renderEquipped() {
+      equippedGrid.innerHTML = '';
+      for (let i = 0; i < 8; i++) {
+        const slot = document.createElement('div');
+        slot.className = 'slot' + (equipped[i] ? ' filled' : ' empty');
+        if (equipped[i]) {
+          const part = equipped[i];
+          let title = part.name;
+          // レベル依存の効果がある場合は、現在の効果量を表示
+          if (part.levelEffects) {
+            const effects = [];
+            for (const stat in part.levelEffects.base) {
+              const effect = getPartEffect(part, stat);
+              if (effect > 0) {
+                effects.push(`${stat === 'hp' ? 'HP' : 
+                  stat === 'ballistic' ? '耐実弾' :
+                  stat === 'beam' ? '耐ビーム' :
+                  stat === 'melee' ? '耐格闘' :
+                  stat === 'shooting' ? '射撃' :
+                  stat === 'fighting' ? '格闘' :
+                  stat === 'speed' ? 'スピード' :
+                  stat === 'dash' ? '高速移動' :
+                  stat === 'thruster' ? 'スラスター' :
+                  stat === 'turn' ? '旋回' : stat}+${effect}`);
+              }
+            }
+            if (effects.length > 0) {
+              title += '\n' + effects.join('\n');
+            }
+          }
+          slot.textContent = part.name;
+          slot.title = title;
+          slot.onclick = () => {
+            equipped[i] = null;
+            renderEquipped();
+            renderPartsList();
+            updateStatus();
+          };
+        } else {
+          slot.textContent = '＋';
+          slot.onclick = null;
+        }
+        equippedGrid.appendChild(slot);
+      }
+    }
+
+    // --- スロット使用数集計 ---
+    function getUsedSlots() {
+      let short = 0, middle = 0, long = 0;
+      equipped.forEach(part => {
+        if (part) {
+          short += part.slot.short || 0;
+          middle += part.slot.middle || 0;
+          long += part.slot.long || 0;
+        }
+      });
+      return { short, middle, long };
+    }
+
+    // --- 上限値を考慮したパーツ上昇値の計算 ---
+    function getCappedBonus(base, bonus, limit) {
+      if (limit === undefined || limit === null) return bonus;
+      if (base >= limit) return 0;
+      if (base + bonus > limit) return limit - base;
+      return bonus;
+    }
+
+    // --- 強化段階に応じたパーツ効果量の取得 ---
+    function getPartEffect(part, stat) {
+      // レベル依存の効果を計算
+      if (part.levelEffects) {
+        const baseEffect = part.levelEffects.base[stat] || 0;
+        const perLevelEffect = part.levelEffects.perLevel[stat] || 0;
+        const maxBonus = part.levelEffects.maxBonus[stat] || 0;
+        
+        if (perLevelEffect > 0) {
+          const level = Number(document.getElementById('base_level').value) || 1;
+          const levelBonus = Math.min((level - 1) * perLevelEffect, maxBonus - baseEffect);
+          return baseEffect + levelBonus;
+        }
+        
+        return baseEffect;
+      }
+
+      // 強化段階依存の効果を計算
+      if (part.enhanceEffects) {
+        const enhanceStage = getEnhanceStage();
+        let effect = 0;
+
+        // 強化段階ごとの効果を取得
+        const stages = Object.keys(part.enhanceEffects).map(Number).sort((a, b) => a - b);
+        for (const stage of stages) {
+          if (enhanceStage >= stage) {
+            effect = part.enhanceEffects[stage][stat] || 0;
+          } else {
+            break;
+          }
+        }
+
+        return effect;
+      }
+
+      // 通常の効果を返す
+      return part[stat] || 0;
+    }
+
+    // --- ステータス計算・表示 ---
+    function updateStatus() {
+      const getNum = id => Number(document.getElementById(id).value) || 0;
+      const base = {
+        hp: getNum('base_hp'),
+        ballistic: getNum('base_ballistic'),
+        beam: getNum('base_beam'),
+        melee: getNum('base_melee'),
+        shooting: getNum('base_shooting'),
+        fighting: getNum('base_fighting'),
+        speed: getNum('base_speed'),
+        dash: getNum('base_dash'),
+        thruster: getNum('base_thruster'),
+        turn: getNum('base_turn')
+      };
+
+      // 拡張スキル補正・上限
+      let expansionBonus = { hp:0, ballistic:0, beam:0, melee:0, shooting:0, fighting:0, speed:0, dash:0, thruster:0, turn:0 };
+      let expansionLimit = {};
+      if (selectedExpansionSkill && selectedExpansionSkill.bonus) {
+        for (const key in selectedExpansionSkill.bonus) {
+          expansionBonus[key] = selectedExpansionSkill.bonus[key] || 0;
+        }
+      }
+      if (selectedExpansionSkill && selectedExpansionSkill.limit) {
+        for (const key in selectedExpansionSkill.limit) {
+          expansionLimit[key] = selectedExpansionSkill.limit[key] || 0;
+        }
+      }
+      if (selectedExpansionSkill && selectedExpansionSkill.category && selectedExpansionSkill.effect) {
+        const count = equipped.filter(part => part && part.category === selectedExpansionSkill.category).length;
+        for (const stat in selectedExpansionSkill.effect) {
+          expansionBonus[stat] = (expansionBonus[stat] || 0) + selectedExpansionSkill.effect[stat] * count;
+        }
+      }
+
+      // パーツ合計
+      let rawBonus = {
+        hp: 0, ballistic: 0, beam: 0, melee: 0,
+        shooting: 0, fighting: 0, speed: 0, dash: 0, thruster: 0, turn: 0
+      };
+      let hpPercentBonus = 0;  // HPの割合増加効果を保持する変数
+      let fightingPercentBonus = 0; // 格闘補正の割合増加効果を保持する変数
+      equipped.forEach(part => {
+        if (part) {
+          rawBonus.hp += getPartEffect(part, 'hp');
+          rawBonus.ballistic += getPartEffect(part, 'ballistic');
+          rawBonus.beam += getPartEffect(part, 'beam');
+          rawBonus.melee += getPartEffect(part, 'melee');
+          rawBonus.shooting += getPartEffect(part, 'shooting');
+          rawBonus.fighting += getPartEffect(part, 'fighting');
+          rawBonus.speed += getPartEffect(part, 'speed');
+          rawBonus.dash += getPartEffect(part, 'dash');
+          rawBonus.thruster += getPartEffect(part, 'thruster');
+          rawBonus.turn += getPartEffect(part, 'turn');
+
+          // HPと格闘補正の割合増加効果を集計
+          if (part.specialEffects) {
+            part.specialEffects.forEach(effect => {
+              if (effect.type === 'hp_percent') {
+                hpPercentBonus += effect.value;
+              }
+              if (effect.type === 'fighting_percent') {
+                fightingPercentBonus += effect.value;
+              }
+            });
+          }
+        }
+      });
+
+      // 上限を考慮したボーナス
+      let bonus = Object.assign({}, rawBonus);
+      let total = {};
+      // 上限あり
+      ['ballistic','beam','melee','shooting','fighting','speed','dash','thruster'].forEach(stat=>{
+        let limit = BASE_LIMITS[stat];
+        if (expansionLimit[stat]) limit = (limit || 0) + expansionLimit[stat];
+        // パーツの上限値増加効果を加算
+        equipped.forEach(part => {
+          if (part && part.limitBonus && part.limitBonus[stat]) {
+            limit = (limit || 0) + part.limitBonus[stat];
+          }
+        });
+        let baseWithExpansion = base[stat] + (expansionBonus[stat] || 0);
+        bonus[stat] = getCappedBonus(baseWithExpansion, rawBonus[stat], limit);
+        total[stat] = limit !== null && limit !== undefined
+          ? Math.min(baseWithExpansion + bonus[stat], limit)
+          : baseWithExpansion + bonus[stat];
+
+        // 格闘補正の場合、割合増加を適用し、再度上限チェック
+        if (stat === 'fighting' && fightingPercentBonus > 0) {
+          total.fighting = Math.floor(total.fighting * (1 + fightingPercentBonus / 100));
+          if (limit !== null && limit !== undefined) {
+            total.fighting = Math.min(total.fighting, limit);
+          }
+          // 格闘補正の上昇値に割合増加分を加算（小数点以下切り捨て）
+          bonus.fighting += Math.floor((base.fighting + expansionBonus.fighting + rawBonus.fighting) * (fightingPercentBonus / 100));
+        }
+      });
+      // 上限なし
+      ['hp','turn'].forEach(stat=>{
+        total[stat] = base[stat] + (expansionBonus[stat] || 0) + rawBonus[stat];
+        bonus[stat] = rawBonus[stat];
+      });
+
+      // HPの割合増加効果を適用
+      if (hpPercentBonus > 0) {
+        total.hp = Math.floor(total.hp * (1 + hpPercentBonus / 100));
+        // HPの上昇値に割合増加分を加算
+        bonus.hp += Math.floor((base.hp + expansionBonus.hp + rawBonus.hp) * (hpPercentBonus / 100));
+      }
+
+      document.getElementById('hp_bonus').textContent = bonus.hp + (expansionBonus.hp || 0);
+      document.getElementById('ballistic_bonus').textContent = bonus.ballistic + (expansionBonus.ballistic || 0);
+      document.getElementById('beam_bonus').textContent = bonus.beam + (expansionBonus.beam || 0);
+      document.getElementById('melee_bonus').textContent = bonus.melee + (expansionBonus.melee || 0);
+      document.getElementById('shooting_bonus').textContent = bonus.shooting + (expansionBonus.shooting || 0);
+      document.getElementById('fighting_bonus').textContent = bonus.fighting + (expansionBonus.fighting || 0);
+      document.getElementById('speed_bonus').textContent = bonus.speed + (expansionBonus.speed || 0);
+      document.getElementById('dash_bonus').textContent = bonus.dash + (expansionBonus.dash || 0);
+      document.getElementById('thruster_bonus').textContent = bonus.thruster + (expansionBonus.thruster || 0);
+      document.getElementById('turn_bonus').textContent = bonus.turn + (expansionBonus.turn || 0);
+
+      function setTotal(id, val, limit) {
+        const td = document.getElementById(id);
+        td.textContent = val;
+        if (limit !== undefined && limit !== null && val === limit) {
+          td.classList.add('capped');
+        } else {
+          td.classList.remove('capped');
+        }
+      }
+
+      // 上限値の計算（パーツのlimitBonusを考慮）
+      function calculateLimit(stat) {
+        let limit = BASE_LIMITS[stat];
+        if (expansionLimit[stat]) limit = (limit || 0) + expansionLimit[stat];
+        equipped.forEach(part => {
+          if (part && part.limitBonus && part.limitBonus[stat]) {
+            limit = (limit || 0) + part.limitBonus[stat];
+          }
+        });
+        return limit;
+      }
+
+      setTotal('hp_total', total.hp);
+      setTotal('ballistic_total', total.ballistic, calculateLimit('ballistic'));
+      setTotal('beam_total', total.beam, calculateLimit('beam'));
+      setTotal('melee_total', total.melee, calculateLimit('melee'));
+      setTotal('shooting_total', total.shooting, calculateLimit('shooting'));
+      setTotal('fighting_total', total.fighting, calculateLimit('fighting'));
+      setTotal('speed_total', total.speed, calculateLimit('speed'));
+      setTotal('dash_total', total.dash, calculateLimit('dash'));
+      setTotal('thruster_total', total.thruster, calculateLimit('thruster'));
+      setTotal('turn_total', total.turn);
+
+      const slotShort = getNum('slot_short');
+      const slotMiddle = getNum('slot_middle');
+      const slotLong = getNum('slot_long');
+      const used = getUsedSlots();
+      document.getElementById('used_short').textContent = used.short;
+      document.getElementById('used_middle').textContent = used.middle;
+      document.getElementById('used_long').textContent = used.long;
+      document.getElementById('remain_short').textContent = slotShort - used.short;
+      document.getElementById('remain_middle').textContent = slotMiddle - used.middle;
+      document.getElementById('remain_long').textContent = slotLong - used.long;
+
+      // 追加効果の表示を更新
+      const specialEffectsList = document.getElementById('special-effects-list');
+      specialEffectsList.innerHTML = '';
+      
+      // 通常の特殊効果を表示
+      equipped.forEach(part => {
+        if (part && part.specialEffect) {
+          const effectDiv = document.createElement('div');
+          effectDiv.className = 'special-effect-item';
+          effectDiv.innerHTML = `
+            <div class="effect">${part.specialEffect}</div>
+          `;
+          specialEffectsList.appendChild(effectDiv);
+        }
+      });
+
+      // 数値合計が必要な特殊効果を集計
+      const effectTotals = {};
+      equipped.forEach(part => {
+        if (part && part.specialEffects) {
+          part.specialEffects.forEach(effect => {
+            if (!effectTotals[effect.type]) {
+              effectTotals[effect.type] = {
+                value: 0,
+                text: effect.text,
+                unique: effect.unique
+              };
+            }
+            // レベル依存の効果の場合、現在の効果量を計算
+            if (part.levelEffects && part.levelEffects.base[effect.type]) {
+              const currentEffect = getPartEffect(part, effect.type);
+              // 重複しない効果の場合は、より大きい値を採用
+              if (effect.unique) {
+                effectTotals[effect.type].value = Math.max(effectTotals[effect.type].value, currentEffect);
+              } else {
+              effectTotals[effect.type].value += currentEffect;
+              }
+            } else {
+              // 重複しない効果の場合は、より大きい値を採用
+              if (effect.unique) {
+                effectTotals[effect.type].value = Math.max(effectTotals[effect.type].value, effect.value);
+            } else {
+              effectTotals[effect.type].value += effect.value;
+              }
+            }
+          });
+        }
+      });
+
+      // オーバーチューン効果の上限を適用
+      if (effectTotals['shooting_damage_overtune']) {
+        effectTotals['shooting_damage_overtune'].value = Math.min(effectTotals['shooting_damage_overtune'].value, 10);
+      }
+      if (effectTotals['melee_damage_overtune']) {
+        effectTotals['melee_damage_overtune'].value = Math.min(effectTotals['melee_damage_overtune'].value, 12);
+      }
+
+      // 射撃ダメージ増加効果を合計
+      let totalShootingDamage = 0;
+      if (effectTotals['shooting_damage']) {
+        totalShootingDamage += effectTotals['shooting_damage'].value;
+      }
+      if (effectTotals['shooting_damage_overtune']) {
+        totalShootingDamage += effectTotals['shooting_damage_overtune'].value;
+      }
+      if (effectTotals['shooting_damage_decrease']) {
+        totalShootingDamage -= effectTotals['shooting_damage_decrease'].value;
+      }
+
+      // 格闘ダメージ増加効果を合計
+      let totalMeleeDamage = 0;
+      if (effectTotals['melee_damage']) {
+        totalMeleeDamage += effectTotals['melee_damage'].value;
+      }
+      if (effectTotals['melee_damage_overtune']) {
+        totalMeleeDamage += effectTotals['melee_damage_overtune'].value;
+      }
+      if (effectTotals['melee_damage_decrease']) {
+        totalMeleeDamage -= effectTotals['melee_damage_decrease'].value;
+      }
+
+      // 合計した特殊効果を表示
+      Object.entries(effectTotals).forEach(([type, data]) => {
+        // ダメージ増加効果とHP割合増加効果は個別に表示せず、合計値のみ表示
+        if (type === 'shooting_damage' || type === 'shooting_damage_overtune' || type === 'shooting_damage_decrease' ||
+            type === 'melee_damage' || type === 'melee_damage_overtune' || type === 'melee_damage_decrease' ||
+            type === 'hp_percent' || type === 'fighting_percent') {
+          return;
+        }
+        const effectDiv = document.createElement('div');
+        effectDiv.className = 'special-effect-item';
+        effectDiv.innerHTML = `
+          <div class="effect">${data.text.replace('%d', data.value)}</div>
+        `;
+        specialEffectsList.appendChild(effectDiv);
+      });
+
+      // 合計したダメージ増加効果を表示
+      if (totalShootingDamage !== 0) {
+        const effectDiv = document.createElement('div');
+        effectDiv.className = 'special-effect-item';
+        effectDiv.innerHTML = `
+          <div class="effect">射撃ダメージが${totalShootingDamage}%増加</div>
+        `;
+        specialEffectsList.appendChild(effectDiv);
+      }
+      if (totalMeleeDamage !== 0) {
+        const effectDiv = document.createElement('div');
+        effectDiv.className = 'special-effect-item';
+        effectDiv.innerHTML = `
+          <div class="effect">格闘ダメージが${totalMeleeDamage}%増加</div>
+        `;
+        specialEffectsList.appendChild(effectDiv);
+      }
+
+      // 合計したHP割合増加効果を表示
+      if (hpPercentBonus > 0) {
+          const effectDiv = document.createElement('div');
+          effectDiv.className = 'special-effect-item';
+          effectDiv.innerHTML = `
+            <div class="effect">機体HPが${hpPercentBonus}%増加</div>
+          `;
+          specialEffectsList.appendChild(effectDiv);
+      }
+      // 合計した格闘補正割合増加効果を表示
+      if (fightingPercentBonus > 0) {
+          const effectDiv = document.createElement('div');
+          effectDiv.className = 'special-effect-item';
+          effectDiv.innerHTML = `
+            <div class="effect">格闘補正が${fightingPercentBonus}%増加</div>
+          `;
+          specialEffectsList.appendChild(effectDiv);
+      }
+
+      // 火力指数の計算
+      const shootingRatio = getNum('shooting_ratio') / 100;
+      const fightingRatio = getNum('fighting_ratio') / 100;
+      const totalRatio = shootingRatio + fightingRatio;
+      
+      // 攻撃割合正規化用数値
+      const normalizationFactor = totalRatio > 0 ? 1 / totalRatio : 0;
+      
+      // shooting_damageとmelee_damageの合計を計算
+      let shootingDamageBonus = 0;
+      let meleeDamageBonus = 0;
+      let shootingDamageOvertune = 0;
+      let meleeDamageOvertune = 0;
+      equipped.forEach(part => {
+        if (part && part.specialEffects) {
+          part.specialEffects.forEach(effect => {
+            if (effect.type === 'shooting_damage') {
+              if (part.levelEffects && part.levelEffects.base[effect.type]) {
+                shootingDamageBonus += getPartEffect(part, effect.type);
+              } else {
+                shootingDamageBonus += effect.value;
+              }
+            }
+            if (effect.type === 'shooting_damage_decrease') {
+              shootingDamageBonus -= effect.value;
+            }
+            if (effect.type === 'shooting_damage_overtune') {
+              if (part.levelEffects && part.levelEffects.base[effect.type]) {
+                shootingDamageOvertune += getPartEffect(part, effect.type);
+              } else {
+                shootingDamageOvertune += effect.value;
+              }
+            }
+            if (effect.type === 'melee_damage') {
+              if (part.levelEffects && part.levelEffects.base[effect.type]) {
+                meleeDamageBonus += getPartEffect(part, effect.type);
+              } else {
+                meleeDamageBonus += effect.value;
+              }
+            }
+            if (effect.type === 'melee_damage_decrease') {
+              meleeDamageBonus -= effect.value;
+            }
+            if (effect.type === 'melee_damage_overtune') {
+              if (part.levelEffects && part.levelEffects.base[effect.type]) {
+                meleeDamageOvertune += getPartEffect(part, effect.type);
+              } else {
+                meleeDamageOvertune += effect.value;
+              }
+            }
+          });
+        }
+      });
+
+      // オーバーチューン効果の合計を制限
+      shootingDamageOvertune = Math.min(shootingDamageOvertune, 10);
+      meleeDamageOvertune = Math.min(meleeDamageOvertune, 12);
+
+      // 火力指数の計算
+      const powerIndex = 
+        (shootingRatio * normalizationFactor * ((total.shooting + 100) / 100) * (1 + (shootingDamageBonus + shootingDamageOvertune) / 100) +
+        fightingRatio * normalizationFactor * ((total.fighting + 100) / 100) * (1 + (meleeDamageBonus + meleeDamageOvertune) / 100))*100;
+
+      // 火力指数の表示を更新
+      document.getElementById('power_index').textContent = powerIndex.toFixed(1);
+
+      // 耐久指数の計算
+      const ballisticRatio = getNum('ballistic_ratio') ;
+      const beamRatio = getNum('beam_ratio') ;
+      const meleeRatio = getNum('melee_ratio') ;
+      const totalDamageRatio = ballisticRatio + beamRatio + meleeRatio;
+      
+      // 被ダメージ正規化数値
+      const damageNormalizationFactor = totalDamageRatio > 0 ? 1 / totalDamageRatio : 0;
+
+      // 被ダメージ軽減率の合計を計算
+      let ballisticReduction = 0;
+      let beamReduction = 0;
+      let meleeReduction = 0;
+      equipped.forEach(part => {
+        if (part && part.specialEffects) {
+          part.specialEffects.forEach(effect => {
+            if (effect.type === 'ballistic_reduction') {
+              ballisticReduction += effect.value;
+            }
+            if (effect.type === 'beam_reduction') {
+              beamReduction += effect.value;
+            }
+            if (effect.type === 'melee_reduction') {
+              meleeReduction += effect.value;
+            }
+          });
+        }
+      });
+
+      // 耐久指数の計算
+      const durabilityIndex = total.hp / (
+        ballisticRatio * damageNormalizationFactor * (1 - total.ballistic / 100) * (1 - ballisticReduction / 100) +
+        beamRatio * damageNormalizationFactor * (1 - total.beam / 100) * (1 - beamReduction / 100) +
+        meleeRatio * damageNormalizationFactor * (1 - total.melee / 100) * (1 - meleeReduction / 100)
+      );
+
+      // 耐久指数の表示を更新
+      document.getElementById('durability_index').textContent = durabilityIndex.toFixed(0);
+    }
+
+    window.onclick = function(event) {
+      const modal = document.getElementById('part-modal');
+      if (event.target == modal) closeModal();
+    };
+
+    [
+      'base_hp', 'base_ballistic', 'base_beam', 'base_melee',
+      'base_shooting', 'base_fighting', 'base_speed', 'base_dash',
+      'base_thruster', 'base_turn',
+      'slot_short', 'slot_middle', 'slot_long',
+      'enhanceStage', 'base_level',
+      'shooting_ratio', 'fighting_ratio',
+      'ballistic_ratio', 'beam_ratio', 'melee_ratio'
+    ].forEach(id => {
+      document.getElementById(id).addEventListener('input', () => {
+        updateStatus();
+        if (id === 'slot_short' || id === 'slot_middle' || id === 'slot_long') {
+          renderPartsList();
+        }
+      });
+      document.getElementById(id).addEventListener('change', () => {
+        updateStatus();
+        if (id === 'slot_short' || id === 'slot_middle' || id === 'slot_long') {
+          renderPartsList();
+        }
+      });
+    });
+// 軽量な耐久指数計算関数
+function calculateDurabilityIndexFast(testEquipped) {
+  const getNum = id => Number(document.getElementById(id).value) || 0;
+  const base = {
+    hp: getNum('base_hp'),
+    ballistic: getNum('base_ballistic'),
+    beam: getNum('base_beam'),
+    melee: getNum('base_melee')
+  };
+
+  // 拡張スキル補正
+  let expansionBonus = { hp: 0, ballistic: 0, beam: 0, melee: 0 };
+  if (selectedExpansionSkill && selectedExpansionSkill.bonus) {
+    for (const key in selectedExpansionSkill.bonus) {
+      expansionBonus[key] = selectedExpansionSkill.bonus[key] || 0;
+    }
+  }
+  if (selectedExpansionSkill && selectedExpansionSkill.category && selectedExpansionSkill.effect) {
+    const count = testEquipped.filter(part => part && part.category === selectedExpansionSkill.category).length;
+    for (const stat in selectedExpansionSkill.effect) {
+      expansionBonus[stat] = (expansionBonus[stat] || 0) + selectedExpansionSkill.effect[stat] * count;
+    }
+  }
+
+  // パーツ合計
+  let rawBonus = { hp: 0, ballistic: 0, beam: 0, melee: 0 };
+  let hpPercentBonus = 0;
+  testEquipped.forEach(part => {
+    if (part) {
+      rawBonus.hp += getPartEffect(part, 'hp');
+      rawBonus.ballistic += getPartEffect(part, 'ballistic');
+      rawBonus.beam += getPartEffect(part, 'beam');
+      rawBonus.melee += getPartEffect(part, 'melee');
+
+      if (part.specialEffects) {
+        part.specialEffects.forEach(effect => {
+          if (effect.type === 'hp_percent') {
+            hpPercentBonus += effect.value;
+          }
+        });
+      }
+    }
+  });
+
+  // 上限計算
+  function calculateLimit(stat) {
+    let limit = BASE_LIMITS[stat];
+    if (selectedExpansionSkill && selectedExpansionSkill.limit && selectedExpansionSkill.limit[stat]) {
+      limit = (limit || 0) + selectedExpansionSkill.limit[stat];
+    }
+    testEquipped.forEach(part => {
+      if (part && part.limitBonus && part.limitBonus[stat]) {
+        limit = (limit || 0) + part.limitBonus[stat];
+      }
+    });
+    return limit;
+  }
+
+  // 最終値計算
+  let total = {};
+  ['ballistic', 'beam', 'melee'].forEach(stat => {
+    let limit = calculateLimit(stat);
+    let baseWithExpansion = base[stat] + (expansionBonus[stat] || 0);
+    let bonus = getCappedBonus(baseWithExpansion, rawBonus[stat], limit);
+    total[stat] = Math.min(baseWithExpansion + bonus, limit || Infinity);
+  });
+
+  total.hp = base.hp + (expansionBonus.hp || 0) + rawBonus.hp;
+  if (hpPercentBonus > 0) {
+    total.hp = Math.floor(total.hp * (1 + hpPercentBonus / 100));
+  }
+
+  // 被ダメージ軽減率の計算
+  let ballisticReduction = 0;
+  let beamReduction = 0;
+  let meleeReduction = 0;
+  testEquipped.forEach(part => {
+    if (part && part.specialEffects) {
+      part.specialEffects.forEach(effect => {
+        if (effect.type === 'ballistic_reduction') ballisticReduction += effect.value;
+        if (effect.type === 'beam_reduction') beamReduction += effect.value;
+        if (effect.type === 'melee_reduction') meleeReduction += effect.value;
+      });
+    }
+  });
+
+  // 耐久指数計算
+  const ballisticRatio = getNum('ballistic_ratio') ;
+  const beamRatio = getNum('beam_ratio') ;
+  const meleeRatio = getNum('melee_ratio') ;
+  const totalDamageRatio = ballisticRatio + beamRatio + meleeRatio;
+  const damageNormalizationFactor = totalDamageRatio > 0 ? 1 / totalDamageRatio : 0;
+
+  const durabilityIndex = total.hp / (
+    ballisticRatio * damageNormalizationFactor * (1 - total.ballistic / 100) * (1 - ballisticReduction / 100) +
+    beamRatio * damageNormalizationFactor * (1 - total.beam / 100) * (1 - beamReduction / 100) +
+    meleeRatio * damageNormalizationFactor * (1 - total.melee / 100) * (1 - meleeReduction / 100)
+  );
+
+  return durabilityIndex;
+}
+// 軽量なスラスター計算関数
+function calculateThrusterFast(testEquipped) {
+  const getNum = id => Number(document.getElementById(id).value) || 0;
+  const base = {
+    thruster: getNum('base_thruster')
+  };
+
+  // 拡張スキル補正
+  let expansionBonus = { thruster: 0 };
+  if (selectedExpansionSkill && selectedExpansionSkill.bonus) {
+    for (const key in selectedExpansionSkill.bonus) {
+      expansionBonus[key] = selectedExpansionSkill.bonus[key] || 0;
+    }
+  }
+  if (selectedExpansionSkill && selectedExpansionSkill.category && selectedExpansionSkill.effect) {
+    const count = testEquipped.filter(part => part && part.category === selectedExpansionSkill.category).length;
+    for (const stat in selectedExpansionSkill.effect) {
+      expansionBonus[stat] = (expansionBonus[stat] || 0) + selectedExpansionSkill.effect[stat] * count;
+    }
+  }
+
+  // パーツ合計
+  let rawBonus = { thruster: 0 };
+  testEquipped.forEach(part => {
+    if (part) {
+      rawBonus.thruster += getPartEffect(part, 'thruster');
+    }
+  });
+
+  // 上限計算
+  function calculateLimit(stat) {
+    let limit = BASE_LIMITS[stat];
+    if (selectedExpansionSkill && selectedExpansionSkill.limit && selectedExpansionSkill.limit[stat]) {
+      limit = (limit || 0) + selectedExpansionSkill.limit[stat];
+    }
+    testEquipped.forEach(part => {
+      if (part && part.limitBonus && part.limitBonus[stat]) {
+        limit = (limit || 0) + part.limitBonus[stat];
+      }
+    });
+    return limit;
+  }
+
+  // 最終値計算
+  const limit = calculateLimit('thruster');
+  const baseWithExpansion = base.thruster + (expansionBonus.thruster || 0);
+  const bonus = getCappedBonus(baseWithExpansion, rawBonus.thruster, limit);
+  const total = Math.min(baseWithExpansion + bonus, limit || Infinity);
+
+  return total;
+}
+
+
+function maximizeThruster() {
+  const currentEquipped = [...equipped];
+  
+  const thrusterParts = customParts.filter(part => {
+    const isCustomThrusterSelected = selectedExpansionSkill && selectedExpansionSkill.key.startsWith('custom_thruster');
+    
+    // スラスターに影響するパーツを選択
+    const hasThrusterEffect = part.thruster || 
+      (part.specialEffects && part.specialEffects.some(effect => 
+        effect.type === 'thruster_recovery' || effect.type === 'overheat'
+      )) ||
+      (part.levelEffects && part.levelEffects.base && part.levelEffects.base.thruster) ||
+      (part.enhanceEffects && Object.values(part.enhanceEffects).some(effects => effects.thruster));
+    
+    const isCustomThrusterPart = isCustomThrusterSelected && part.category === "specialparts";
+    
+    return (hasThrusterEffect || isCustomThrusterPart) && ownedParts[part.name];
+  });
+
+  const used = getUsedSlots();
+  const slotShort = Number(document.getElementById('slot_short').value) || 0;
+  const slotMiddle = Number(document.getElementById('slot_middle').value) || 0;
+  const slotLong = Number(document.getElementById('slot_long').value) || 0;
+
+  let bestCombination = [...currentEquipped];
+  let maxThruster = calculateThrusterFast(currentEquipped);
+  let minSlotUsage = Infinity;
+
+  function findBestCombination(currentParts, currentIndex, currentUsed, usedTypes, usedNames) {
+    const currentThruster = calculateThrusterFast(currentParts);
+    const currentSlotUsage = currentUsed.short + currentUsed.middle + currentUsed.long;
+    
+    if (currentThruster > maxThruster || 
+        (currentThruster === maxThruster && currentSlotUsage < minSlotUsage)) {
+      maxThruster = currentThruster;
+      minSlotUsage = currentSlotUsage;
+      bestCombination = [...currentParts];
+    }
+
+    if (currentParts.filter(p => p !== null).length < 8) {
+      for (let i = currentIndex; i < thrusterParts.length; i++) {
+        const part = thrusterParts[i];
+        
+        // 早期スキップ条件
+        if (currentUsed.short + part.slot.short > slotShort ||
+            currentUsed.middle + part.slot.middle > slotMiddle ||
+            currentUsed.long + part.slot.long > slotLong) {
+          continue;
+        }
+
+        if (part.type && usedTypes.has(part.type)) continue;
+        if (usedNames.has(part.name)) continue;
+
+        const newUsed = {
+          short: currentUsed.short + part.slot.short,
+          middle: currentUsed.middle + part.slot.middle,
+          long: currentUsed.long + part.slot.long
+        };
+        
+        const newParts = [...currentParts];
+        const emptyIndex = newParts.findIndex(p => p === null);
+        if (emptyIndex !== -1) {
+          newParts[emptyIndex] = part;
+          
+          const newTypes = new Set(usedTypes);
+          const newNames = new Set(usedNames);
+          if (part.type) newTypes.add(part.type);
+          newNames.add(part.name);
+          
+          findBestCombination(newParts, i + 1, newUsed, newTypes, newNames);
+        }
+      }
+    }
+  }
+
+  // 初期状態のtypeとnameを記録
+  const initialTypes = new Set();
+  const initialNames = new Set();
+  currentEquipped.forEach(part => {
+    if (part) {
+      if (part.type) initialTypes.add(part.type);
+      initialNames.add(part.name);
+    }
+  });
+
+  findBestCombination([...currentEquipped], 0, used, initialTypes, initialNames);
+
+  // 最適な組み合わせを適用
+  equipped = bestCombination;
+  renderEquipped();
+  renderPartsList();
+  updateStatus();
+}
+
+
+
+
+    // 全て解除ボタンのイベントリスナーを設定
+    document.getElementById('clear-all-btn').addEventListener('click', function() {
+      equipped = Array(8).fill(null);
+      renderEquipped();
+      renderPartsList();
+      updateStatus();
+    });
+
+    renderPartsList();
+    renderEquipped();
+    updateStatus();
+// 軽量な火力指数計算関数
+function calculatePowerIndexFast(testEquipped) {
+  const getNum = id => Number(document.getElementById(id).value) || 0;
+  const base = {
+    shooting: getNum('base_shooting'),
+    fighting: getNum('base_fighting')
+  };
+
+  // 拡張スキル補正
+  let expansionBonus = { shooting: 0, fighting: 0 };
+  if (selectedExpansionSkill && selectedExpansionSkill.bonus) {
+    for (const key in selectedExpansionSkill.bonus) {
+      expansionBonus[key] = selectedExpansionSkill.bonus[key] || 0;
+    }
+  }
+  if (selectedExpansionSkill && selectedExpansionSkill.category && selectedExpansionSkill.effect) {
+    const count = testEquipped.filter(part => part && part.category === selectedExpansionSkill.category).length;
+    for (const stat in selectedExpansionSkill.effect) {
+      expansionBonus[stat] = (expansionBonus[stat] || 0) + selectedExpansionSkill.effect[stat] * count;
+    }
+  }
+
+  // パーツ合計
+  let rawBonus = { shooting: 0, fighting: 0 };
+  let fightingPercentBonus = 0;
+  testEquipped.forEach(part => {
+    if (part) {
+      rawBonus.shooting += getPartEffect(part, 'shooting');
+      rawBonus.fighting += getPartEffect(part, 'fighting');
+
+      if (part.specialEffects) {
+        part.specialEffects.forEach(effect => {
+          if (effect.type === 'fighting_percent') {
+            fightingPercentBonus += effect.value;
+          }
+        });
+      }
+    }
+  });
+
+  // 上限計算
+  function calculateLimit(stat) {
+    let limit = BASE_LIMITS[stat];
+    if (selectedExpansionSkill && selectedExpansionSkill.limit && selectedExpansionSkill.limit[stat]) {
+      limit = (limit || 0) + selectedExpansionSkill.limit[stat];
+    }
+    testEquipped.forEach(part => {
+      if (part && part.limitBonus && part.limitBonus[stat]) {
+        limit = (limit || 0) + part.limitBonus[stat];
+      }
+    });
+    return limit;
+  }
+
+  // 最終値計算
+  let total = {};
+  ['shooting', 'fighting'].forEach(stat => {
+    let limit = calculateLimit(stat);
+    let baseWithExpansion = base[stat] + (expansionBonus[stat] || 0);
+    let bonus = getCappedBonus(baseWithExpansion, rawBonus[stat], limit);
+    total[stat] = Math.min(baseWithExpansion + bonus, limit || Infinity);
+  });
+
+  // 格闘補正の割合増加を適用
+  if (fightingPercentBonus > 0) {
+    const limit = calculateLimit('fighting');
+    total.fighting = Math.floor(total.fighting * (1 + fightingPercentBonus / 100));
+    if (limit !== null && limit !== undefined) {
+      total.fighting = Math.min(total.fighting, limit);
+    }
+  }
+
+  // ダメージ増加効果の計算
+  let shootingDamageBonus = 0;
+  let meleeDamageBonus = 0;
+  let shootingDamageOvertune = 0;
+  let meleeDamageOvertune = 0;
+
+  testEquipped.forEach(part => {
+    if (part && part.specialEffects) {
+      part.specialEffects.forEach(effect => {
+        if (effect.type === 'shooting_damage') {
+          if (part.levelEffects && part.levelEffects.base[effect.type]) {
+            shootingDamageBonus += getPartEffect(part, effect.type);
+          } else {
+            shootingDamageBonus += effect.value;
+          }
+        }
+        if (effect.type === 'shooting_damage_decrease') {
+          shootingDamageBonus -= effect.value;
+        }
+        if (effect.type === 'shooting_damage_overtune') {
+          if (part.levelEffects && part.levelEffects.base[effect.type]) {
+            shootingDamageOvertune += getPartEffect(part, effect.type);
+          } else {
+            shootingDamageOvertune += effect.value;
+          }
+        }
+        if (effect.type === 'melee_damage') {
+          if (part.levelEffects && part.levelEffects.base[effect.type]) {
+            meleeDamageBonus += getPartEffect(part, effect.type);
+          } else {
+            meleeDamageBonus += effect.value;
+          }
+        }
+        if (effect.type === 'melee_damage_decrease') {
+          meleeDamageBonus -= effect.value;
+        }
+        if (effect.type === 'melee_damage_overtune') {
+          if (part.levelEffects && part.levelEffects.base[effect.type]) {
+            meleeDamageOvertune += getPartEffect(part, effect.type);
+          } else {
+            meleeDamageOvertune += effect.value;
+          }
+        }
+      });
+    }
+  });
+
+  // オーバーチューン効果の上限適用
+  shootingDamageOvertune = Math.min(shootingDamageOvertune, 10);
+  meleeDamageOvertune = Math.min(meleeDamageOvertune, 12);
+
+  // 火力指数計算
+  const shootingRatio = getNum('shooting_ratio') ;
+  const fightingRatio = getNum('fighting_ratio') ;
+  const totalRatio = shootingRatio + fightingRatio;
+  const normalizationFactor = totalRatio > 0 ? 1 / totalRatio : 0;
+
+  const powerIndex = 
+    (shootingRatio * normalizationFactor * ((total.shooting + 100) / 100) * (1 + (shootingDamageBonus + shootingDamageOvertune) / 100) +
+    fightingRatio * normalizationFactor * ((total.fighting + 100) / 100) * (1 + (meleeDamageBonus + meleeDamageOvertune) / 100)) * 100;
+
+  return powerIndex;
+}
+
+function maximizePowerIndex() {
+  const currentEquipped = [...equipped];
+  
+  const attackParts = customParts.filter(part => {
+    const isCustomAttackSelected = selectedExpansionSkill && selectedExpansionSkill.key.startsWith('custom_attack');
+    
+    const isBaseAttackPart = (part.category === "attackparts" || part.category === "specialparts") && part.useAttackParts === true;
+    const isCustomAttackPart = isCustomAttackSelected && part.category === "moveparts" && part.useAttackParts === true;
+    
+    return (isBaseAttackPart || isCustomAttackPart) && ownedParts[part.name];
+  });
+
+  const used = getUsedSlots();
+  const slotShort = Number(document.getElementById('slot_short').value) || 0;
+  const slotMiddle = Number(document.getElementById('slot_middle').value) || 0;
+  const slotLong = Number(document.getElementById('slot_long').value) || 0;
+
+  let bestCombination = [...currentEquipped];
+  let maxPowerIndex = calculatePowerIndexFast(currentEquipped); // 初期値を軽量計算で取得
+  let minSlotUsage = Infinity;
+
+  function findBestCombination(currentParts, currentIndex, currentUsed, usedTypes, usedNames) {
+    // 軽量な火力指数計算を使用
+    const currentPowerIndex = calculatePowerIndexFast(currentParts);
+    const currentSlotUsage = currentUsed.short + currentUsed.middle + currentUsed.long;
+    
+    if (currentPowerIndex > maxPowerIndex || 
+        (currentPowerIndex === maxPowerIndex && currentSlotUsage < minSlotUsage)) {
+      maxPowerIndex = currentPowerIndex;
+      minSlotUsage = currentSlotUsage;
+      bestCombination = [...currentParts];
+    }
+
+    if (currentParts.filter(p => p !== null).length < 8) {
+      for (let i = currentIndex; i < attackParts.length; i++) {
+        const part = attackParts[i];
+        
+        // 早期スキップ条件
+        if (currentUsed.short + part.slot.short > slotShort ||
+            currentUsed.middle + part.slot.middle > slotMiddle ||
+            currentUsed.long + part.slot.long > slotLong) {
+          continue;
+        }
+
+        if (part.type && usedTypes.has(part.type)) continue;
+        if (usedNames.has(part.name)) continue;
+
+        const newUsed = {
+          short: currentUsed.short + part.slot.short,
+          middle: currentUsed.middle + part.slot.middle,
+          long: currentUsed.long + part.slot.long
+        };
+        
+        const newParts = [...currentParts];
+        const emptyIndex = newParts.findIndex(p => p === null);
+        if (emptyIndex !== -1) {
+          newParts[emptyIndex] = part;
+          
+          // Setのコピーを作成
+          const newTypes = new Set(usedTypes);
+          const newNames = new Set(usedNames);
+          if (part.type) newTypes.add(part.type);
+          newNames.add(part.name);
+          
+          findBestCombination(newParts, i + 1, newUsed, newTypes, newNames);
+        }
+      }
+    }
+  }
+
+  // 初期状態のtypeとnameを記録
+  const initialTypes = new Set();
+  const initialNames = new Set();
+  currentEquipped.forEach(part => {
+    if (part) {
+      if (part.type) initialTypes.add(part.type);
+      initialNames.add(part.name);
+    }
+  });
+
+  findBestCombination([...currentEquipped], 0, used, initialTypes, initialNames);
+
+  // 最適な組み合わせを適用
+  equipped = bestCombination;
+  renderEquipped();
+  renderPartsList();
+  updateStatus(); // 最後に一度だけ呼び出し
+}
+
+function maximizeDurabilityIndex() {
+  const currentEquipped = [...equipped];
+  const machineLevel = Number(document.getElementById('base_level').value) || 1;
+  const defenseParts = customParts.filter(part => {
+    const isCustomHpSelected = selectedExpansionSkill && selectedExpansionSkill.key.startsWith('custom_hp');
+    const isCustomArmorSelected = selectedExpansionSkill && selectedExpansionSkill.key.startsWith('custom_armor');
+    
+    const isBaseDefensePart = (part.category === "defparts" || part.category === "specialparts") && part.useDefParts === true;
+    const isCustomHpPart = isCustomHpSelected && part.category === "attackparts" && part.useDefParts === true;
+    const isCustomArmorPart = isCustomArmorSelected && part.category === "auxiliaryparts" && part.useDefParts === true;
+
+        // 機体レベルが1の時は特定のパーツを除外
+        if (machineLevel === 1) {
+      const excludedParts = [
+        "オーバーチューン［フレーム］LV1",
+        "オーバーチューン［実弾装甲］LV1", 
+        "オーバーチューン［ビーム装甲］LV1",
+        "オーバーチューン［格闘装甲］LV1",
+        "ヘビーアーマー LV1"
+      ];
+      
+      if (excludedParts.includes(part.name)) {
+        return false;
+      }
+    }
+    
+    return (isBaseDefensePart || isCustomHpPart || isCustomArmorPart) && ownedParts[part.name];
+  });
+
+  const used = getUsedSlots();
+  const slotShort = Number(document.getElementById('slot_short').value) || 0;
+  const slotMiddle = Number(document.getElementById('slot_middle').value) || 0;
+  const slotLong = Number(document.getElementById('slot_long').value) || 0;
+
+  let bestCombination = [...currentEquipped];
+  let maxDurabilityIndex = calculateDurabilityIndexFast(currentEquipped);
+  let minSlotUsage = Infinity;
+
+  function findBestCombination(currentParts, currentIndex, currentUsed, usedTypes, usedNames) {
+    // 空きスロットの合計を計算
+    const remainingSlots = (slotShort - currentUsed.short) + (slotMiddle - currentUsed.middle) + (slotLong - currentUsed.long);
+    
+    // 空きスロットが8未満の場合のみ耐久指数を計算
+    if (remainingSlots < 8) {
+      const currentDurabilityIndex = calculateDurabilityIndexFast(currentParts);
+      const currentSlotUsage = currentUsed.short + currentUsed.middle + currentUsed.long;
+      
+      if (currentDurabilityIndex > maxDurabilityIndex || 
+          (currentDurabilityIndex === maxDurabilityIndex && currentSlotUsage < minSlotUsage)) {
+        maxDurabilityIndex = currentDurabilityIndex;
+        minSlotUsage = currentSlotUsage;
+        bestCombination = [...currentParts];
+      }
+    }
+
+    if (currentParts.filter(p => p !== null).length < 8) {
+      for (let i = currentIndex; i < defenseParts.length; i++) {
+        const part = defenseParts[i];
+        
+        // 早期スキップ条件
+        if (currentUsed.short + part.slot.short > slotShort ||
+            currentUsed.middle + part.slot.middle > slotMiddle ||
+            currentUsed.long + part.slot.long > slotLong) {
+          continue;
+        }
+
+        if (part.type && usedTypes.has(part.type)) continue;
+        if (usedNames.has(part.name)) continue;
+
+        const newUsed = {
+          short: currentUsed.short + part.slot.short,
+          middle: currentUsed.middle + part.slot.middle,
+          long: currentUsed.long + part.slot.long
+        };
+        
+        const newParts = [...currentParts];
+        const emptyIndex = newParts.findIndex(p => p === null);
+        if (emptyIndex !== -1) {
+          newParts[emptyIndex] = part;
+          
+          const newTypes = new Set(usedTypes);
+          const newNames = new Set(usedNames);
+          if (part.type) newTypes.add(part.type);
+          newNames.add(part.name);
+          
+          findBestCombination(newParts, i + 1, newUsed, newTypes, newNames);
+        }
+      }
+    }
+  }
+
+  // 初期状態のtypeとnameを記録
+  const initialTypes = new Set();
+  const initialNames = new Set();
+  currentEquipped.forEach(part => {
+    if (part) {
+      if (part.type) initialTypes.add(part.type);
+      initialNames.add(part.name);
+    }
+  });
+
+  findBestCombination([...currentEquipped], 0, used, initialTypes, initialNames);
+
+  // 最適な組み合わせを適用
+  equipped = bestCombination;
+  renderEquipped();
+  renderPartsList();
+  updateStatus();
+}
+
+
+    // 火力指数最大化ボタンのイベントリスナーを設定
+    document.getElementById('maximize-power-btn').addEventListener('click', maximizePowerIndex);
+
+    // 耐久指数最大化ボタンのイベントリスナーを設定
+    document.getElementById('maximize-durability-btn').addEventListener('click', maximizeDurabilityIndex);
+    // スラスター最大化ボタンのイベントリスナーを設定
+    document.getElementById('maximize-thruster-btn').addEventListener('click', maximizeThruster);
+
+    // 被ダメ割合を設定する関数
+    function setDamageRatio(ballistic, beam, melee) {
+      document.getElementById('ballistic_ratio').value = ballistic;
+      document.getElementById('beam_ratio').value = beam;
+      document.getElementById('melee_ratio').value = melee;
+      updateStatus();
+    }
+
+    // 保存データの管理
+    let savedData = JSON.parse(localStorage.getItem('battleOpera2SavedData')) || {};
+
+    // 保存機能
+    document.getElementById('save-btn').addEventListener('click', function() {
+      const saveName = document.getElementById('save-name').value.trim();
+      if (!saveName) {
+        alert('保存名を入力してください');
+        return;
+      }
+
+      // 現在の機体情報を収集
+      const currentData = {
+        name: saveName,
+        timestamp: new Date().toISOString(),
+        base: {
+          hp: Number(document.getElementById('base_hp').value),
+          ballistic: Number(document.getElementById('base_ballistic').value),
+          beam: Number(document.getElementById('base_beam').value),
+          melee: Number(document.getElementById('base_melee').value),
+          shooting: Number(document.getElementById('base_shooting').value),
+          fighting: Number(document.getElementById('base_fighting').value),
+          speed: Number(document.getElementById('base_speed').value),
+          dash: Number(document.getElementById('base_dash').value),
+          thruster: Number(document.getElementById('base_thruster').value),
+          turn: Number(document.getElementById('base_turn').value),
+          level: Number(document.getElementById('base_level').value)
+        },
+        total: {
+          hp: Number(document.getElementById('hp_total').textContent),
+          ballistic: Number(document.getElementById('ballistic_total').textContent),
+          beam: Number(document.getElementById('beam_total').textContent),
+          melee: Number(document.getElementById('melee_total').textContent),
+          shooting: Number(document.getElementById('shooting_total').textContent),
+          fighting: Number(document.getElementById('fighting_total').textContent),
+          speed: Number(document.getElementById('speed_total').textContent),
+          dash: Number(document.getElementById('dash_total').textContent),
+          thruster: Number(document.getElementById('thruster_total').textContent),
+          turn: Number(document.getElementById('turn_total').textContent)
+        },
+        slots: {
+          short: Number(document.getElementById('slot_short').value),
+          middle: Number(document.getElementById('slot_middle').value),
+          long: Number(document.getElementById('slot_long').value)
+        },
+        expansionSkill: {
+          type: document.getElementById('expansionSkillType').value,
+          level: document.getElementById('expansionSkillLevel').value
+        },
+        enhanceStage: Number(document.getElementById('enhanceStage').value),
+        damageRatios: {
+          shooting: Number(document.getElementById('shooting_ratio').value),
+          fighting: Number(document.getElementById('fighting_ratio').value),
+          ballistic: Number(document.getElementById('ballistic_ratio').value),
+          beam: Number(document.getElementById('beam_ratio').value),
+          melee: Number(document.getElementById('melee_ratio').value)
+        },
+        equipped: equipped.map(part => part ? {
+          name: part.name,
+          category: part.category,
+          type: part.type,
+          slot: part.slot,
+          specialEffect: part.specialEffect || null,
+          specialEffects: part.specialEffects || [],
+          levelEffects: part.levelEffects || null,
+          enhanceEffects: part.enhanceEffects || null
+        } : null),
+        // 火力指数と耐久指数を保存
+        powerIndex: parseFloat(document.getElementById('power_index').textContent),
+        durabilityIndex: parseFloat(document.getElementById('durability_index').textContent)
+      };
+
+      // 保存
+      savedData[saveName] = currentData;
+      localStorage.setItem('battleOpera2SavedData', JSON.stringify(savedData));
+
+      // 保存名をクリア
+      document.getElementById('save-name').value = '';
+
+      // セレクトボックスを更新
+      updateLoadSelects();
+
+      alert('保存しました');
+    });
+
+    // 読み込み機能
+    document.getElementById('load-btn').addEventListener('click', function() {
+      const saveName = document.getElementById('load-select').value;
+      if (!saveName) {
+        alert('保存データを選択してください');
+        return;
+      }
+
+      const data = savedData[saveName];
+      if (!data) {
+        alert('データが見つかりません');
+        return;
+      }
+
+      // 基本ステータスを設定
+      document.getElementById('base_hp').value = data.base.hp;
+      document.getElementById('base_ballistic').value = data.base.ballistic;
+      document.getElementById('base_beam').value = data.base.beam;
+      document.getElementById('base_melee').value = data.base.melee;
+      document.getElementById('base_shooting').value = data.base.shooting;
+      document.getElementById('base_fighting').value = data.base.fighting;
+      document.getElementById('base_speed').value = data.base.speed;
+      document.getElementById('base_dash').value = data.base.dash;
+      document.getElementById('base_thruster').value = data.base.thruster;
+      document.getElementById('base_turn').value = data.base.turn;
+      document.getElementById('base_level').value = data.base.level;
+
+      // スロット数を設定
+      document.getElementById('slot_short').value = data.slots.short;
+      document.getElementById('slot_middle').value = data.slots.middle;
+      document.getElementById('slot_long').value = data.slots.long;
+
+      // 拡張スキルを設定
+      document.getElementById('expansionSkillType').value = data.expansionSkill.type;
+      populateSkillLevel();
+      document.getElementById('expansionSkillLevel').value = data.expansionSkill.level;
+      updateExpansionSkill();
+
+      // 強化段階を設定
+      document.getElementById('enhanceStage').value = data.enhanceStage;
+
+      // 与ダメ割合と被ダメ割合を設定
+      if (data.damageRatios) {
+        document.getElementById('shooting_ratio').value = data.damageRatios.shooting;
+        document.getElementById('fighting_ratio').value = data.damageRatios.fighting;
+        document.getElementById('ballistic_ratio').value = data.damageRatios.ballistic;
+        document.getElementById('beam_ratio').value = data.damageRatios.beam;
+        document.getElementById('melee_ratio').value = data.damageRatios.melee;
+      }
+
+      // 装備パーツを設定
+      equipped = data.equipped.map(partData => {
+        if (!partData) return null;
+        return customParts.find(part => part.name === partData.name) || null;
+      });
+
+      // UIを更新
+      renderEquipped();
+      renderPartsList();
+      updateStatus();
+    });
+
+    // 削除機能
+    document.getElementById('delete-btn').addEventListener('click', function() {
+      const saveName = document.getElementById('load-select').value;
+      if (!saveName) {
+        alert('削除する保存データを選択してください');
+        return;
+      }
+
+      if (confirm(`「${saveName}」を削除してもよろしいですか？`)) {
+        delete savedData[saveName];
+        localStorage.setItem('battleOpera2SavedData', JSON.stringify(savedData));
+        updateLoadSelects();
+        alert('削除しました');
+      }
+    });
+
+    // 全て削除機能
+    document.getElementById('delete-all-btn').addEventListener('click', function() {
+      if (Object.keys(savedData).length === 0) {
+        alert('保存されているデータがありません');
+        return;
+      }
+
+      if (confirm('保存されている全てのデータを削除してもよろしいですか？\nこの操作は取り消せません。')) {
+        savedData = {};
+        localStorage.removeItem('battleOpera2SavedData');
+        updateLoadSelects();
+        alert('全てのデータを削除しました');
+      }
+    });
+
+    // セレクトボックスの更新
+    function updateLoadSelects() {
+      const loadSelect = document.getElementById('load-select');
+      const compareSelect1 = document.getElementById('compare-select-1');
+      const compareSelect2 = document.getElementById('compare-select-2');
+
+      // 既存のオプションをクリア
+      loadSelect.innerHTML = '<option value="">保存データを選択</option>';
+      compareSelect1.innerHTML = '<option value="">比較データ1を選択</option>';
+      compareSelect2.innerHTML = '<option value="">比較データ2を選択</option>';
+
+      // 保存データを追加
+      Object.keys(savedData).forEach(name => {
+        const data = savedData[name];
+        const date = new Date(data.timestamp).toLocaleString();
+        const option = new Option(`${name} (${date})`, name);
+        loadSelect.add(option);
+        compareSelect1.add(new Option(`${name} (${date})`, name));
+        compareSelect2.add(new Option(`${name} (${date})`, name));
+      });
+    }
+
+    // 比較機能
+    document.getElementById('compare-btn').addEventListener('click', function() {
+      const data1Name = document.getElementById('compare-select-1').value;
+      const data2Name = document.getElementById('compare-select-2').value;
+
+      if (!data1Name || !data2Name) {
+        alert('比較するデータを両方選択してください');
+        return;
+      }
+
+      const data1 = savedData[data1Name];
+      const data2 = savedData[data2Name];
+
+      if (!data1 || !data2) {
+        alert('データが見つかりません');
+        return;
+      }
+
+      // 追加効果を集計する関数
+      function aggregateSpecialEffects(equippedParts) {
+        const effects = {};
+        equippedParts.forEach(part => {
+          if (part) {
+            // specialEffect（単数形）の処理
+            if (part.specialEffect) {
+              const effectKey = 'special_' + part.name;
+              if (!effects[effectKey]) {
+                effects[effectKey] = {
+                  value: 1,
+                  text: part.specialEffect,
+                  unique: true
+                };
+              }
+            }
+            // specialEffects（複数形）の処理
+            if (part.specialEffects) {
+              part.specialEffects.forEach(effect => {
+                if (!effects[effect.type]) {
+                  effects[effect.type] = {
+                    value: 0,
+                    text: effect.text,
+                    unique: effect.unique
+                  };
+                }
+                if (effect.unique) {
+                  effects[effect.type].value = Math.max(effects[effect.type].value, effect.value);
+                } else {
+                  effects[effect.type].value += effect.value;
+                }
+              });
+            }
+          }
+        });
+        return effects;
+      }
+
+      // データ1とデータ2の追加効果を集計
+      const effects1 = aggregateSpecialEffects(data1.equipped);
+      const effects2 = aggregateSpecialEffects(data2.equipped);
+
+      // 比較結果を表示
+      const compareResult = document.getElementById('compare-result');
+      const compareContent = document.getElementById('compare-content');
+      compareResult.style.display = 'block';
+      compareContent.innerHTML = `
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+          <!-- 左側：5列の比較テーブル -->
+          <div>
+            <table>
+              <tr>
+                <th>項目</th>
+                <th>データ1</th>
+                <th>データ1優位</th>
+                <th>データ2優位</th>
+                <th>データ2</th>
+              </tr>
+              <tr>
+                <td>HP</td>
+                <td>${data1.total.hp}</td>
+                <td>${data1.total.hp > data2.total.hp ? ((data1.total.hp / data2.total.hp - 1) * 100).toFixed(1) + '%' : '-'}</td>
+                <td>${data2.total.hp > data1.total.hp ? ((data2.total.hp / data1.total.hp - 1) * 100).toFixed(1) + '%' : '-'}</td>
+                <td>${data2.total.hp}</td>
+              </tr>
+              <tr>
+                <td>耐実弾補正</td>
+                <td>${data1.total.ballistic}</td>
+                <td>${data1.total.ballistic > data2.total.ballistic ? '+' + (data1.total.ballistic - data2.total.ballistic) : '-'}</td>
+                <td>${data2.total.ballistic > data1.total.ballistic ? '+' + (data2.total.ballistic - data1.total.ballistic) : '-'}</td>
+                <td>${data2.total.ballistic}</td>
+              </tr>
+              <tr>
+                <td>耐ビーム補正</td>
+                <td>${data1.total.beam}</td>
+                <td>${data1.total.beam > data2.total.beam ? '+' + (data1.total.beam - data2.total.beam) : '-'}</td>
+                <td>${data2.total.beam > data1.total.beam ? '+' + (data2.total.beam - data1.total.beam) : '-'}</td>
+                <td>${data2.total.beam}</td>
+              </tr>
+              <tr>
+                <td>耐格闘補正</td>
+                <td>${data1.total.melee}</td>
+                <td>${data1.total.melee > data2.total.melee ? '+' + (data1.total.melee - data2.total.melee) : '-'}</td>
+                <td>${data2.total.melee > data1.total.melee ? '+' + (data2.total.melee - data1.total.melee) : '-'}</td>
+                <td>${data2.total.melee}</td>
+              </tr>
+              <tr>
+                <td>射撃補正</td>
+                <td>${data1.total.shooting}</td>
+                <td>${data1.total.shooting > data2.total.shooting ? '+' + (data1.total.shooting - data2.total.shooting) : '-'}</td>
+                <td>${data2.total.shooting > data1.total.shooting ? '+' + (data2.total.shooting - data1.total.shooting) : '-'}</td>
+                <td>${data2.total.shooting}</td>
+              </tr>
+              <tr>
+                <td>格闘補正</td>
+                <td>${data1.total.fighting}</td>
+                <td>${data1.total.fighting > data2.total.fighting ? '+' + (data1.total.fighting - data2.total.fighting) : '-'}</td>
+                <td>${data2.total.fighting > data1.total.fighting ? '+' + (data2.total.fighting - data1.total.fighting) : '-'}</td>
+                <td>${data2.total.fighting}</td>
+              </tr>
+              <tr>
+                <td>スピード</td>
+                <td>${data1.total.speed}</td>
+                <td>${data1.total.speed > data2.total.speed ? '+' + (data1.total.speed - data2.total.speed) : '-'}</td>
+                <td>${data2.total.speed > data1.total.speed ? '+' + (data2.total.speed - data1.total.speed) : '-'}</td>
+                <td>${data2.total.speed}</td>
+              </tr>
+              <tr>
+                <td>高速移動</td>
+                <td>${data1.total.dash}</td>
+                <td>${data1.total.dash > data2.total.dash ? '+' + (data1.total.dash - data2.total.dash) : '-'}</td>
+                <td>${data2.total.dash > data1.total.dash ? '+' + (data2.total.dash - data1.total.dash) : '-'}</td>
+                <td>${data2.total.dash}</td>
+              </tr>
+              <tr>
+                <td>スラスター</td>
+                <td>${data1.total.thruster}</td>
+                <td>${data1.total.thruster > data2.total.thruster ? '+' + (data1.total.thruster - data2.total.thruster) : '-'}</td>
+                <td>${data2.total.thruster > data1.total.thruster ? '+' + (data2.total.thruster - data1.total.thruster) : '-'}</td>
+                <td>${data2.total.thruster}</td>
+              </tr>
+              <tr>
+                <td>旋回</td>
+                <td>${data1.total.turn}</td>
+                <td>${data1.total.turn > data2.total.turn ? '+' + (data1.total.turn - data2.total.turn) : '-'}</td>
+                <td>${data2.total.turn > data1.total.turn ? '+' + (data2.total.turn - data1.total.turn) : '-'}</td>
+                <td>${data2.total.turn}</td>
+              </tr>
+              <tr>
+                <td>機体レベル</td>
+                <td>${data1.base.level}</td>
+                <td>${data1.base.level > data2.base.level ? '+' + (data1.base.level - data2.base.level) : '-'}</td>
+                <td>${data2.base.level > data1.base.level ? '+' + (data2.base.level - data1.base.level) : '-'}</td>
+                <td>${data2.base.level}</td>
+              </tr>
+              <tr>
+                <td>火力指数</td>
+                <td>${data1.powerIndex.toFixed(1)}</td>
+                <td>${data1.powerIndex > data2.powerIndex ? ((data1.powerIndex / data2.powerIndex - 1) * 100).toFixed(1) + '%' : '-'}</td>
+                <td>${data2.powerIndex > data1.powerIndex ? ((data2.powerIndex / data1.powerIndex - 1) * 100).toFixed(1) + '%' : '-'}</td>
+                <td>${data2.powerIndex.toFixed(1)}</td>
+              </tr>
+              <tr>
+                <td>耐久指数</td>
+                <td>${data1.durabilityIndex.toFixed(0)}</td>
+                <td>${data1.durabilityIndex > data2.durabilityIndex ? ((data1.durabilityIndex / data2.durabilityIndex - 1) * 100).toFixed(1) + '%' : '-'}</td>
+                <td>${data2.durabilityIndex > data1.durabilityIndex ? ((data2.durabilityIndex / data1.durabilityIndex - 1) * 100).toFixed(1) + '%' : '-'}</td>
+                <td>${data2.durabilityIndex.toFixed(0)}</td>
+              </tr>
+            </table>
+          </div>
+
+          <!-- 右側：データ1とデータ2の詳細情報 -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <!-- データ1の情報 -->
+            <div>
+              <h5>データ1の情報</h5>
+              <div>
+                <h6>追加効果</h6>
+                <table>
+                  ${Object.entries(effects1).map(([type, effect]) => {
+                    // データ2に同じ効果がない、またはデータ1の効果の方が大きい場合は優位
+                    const isBetter = !effects2[type] || effect.value > effects2[type].value;
+                    return `<tr><td style="${isBetter ? 'color: #4CAF50;' : 'color: #000000;'}">${effect.text.replace('%d', effect.value)}</td></tr>`;
+                  }).join('')}
+                </table>
+              </div>
+              <div>
+                <h6>装備パーツ</h6>
+                <ul>
+                  ${data1.equipped.map(part => part ? `<li>${part.name}</li>` : '').join('')}
+                </ul>
+              </div>
+              <div>
+                <h6>与ダメ割合</h6>
+                <table>
+                  <tr><td>射撃</td><td>${data1.damageRatios.shooting}</td></tr>
+                  <tr><td>格闘</td><td>${data1.damageRatios.fighting}</td></tr>
+                </table>
+              </div>
+              <div>
+                <h6>被ダメ割合</h6>
+                <table>
+                  <tr><td>実弾</td><td>${data1.damageRatios.ballistic}</td></tr>
+                  <tr><td>ビーム</td><td>${data1.damageRatios.beam}</td></tr>
+                  <tr><td>格闘</td><td>${data1.damageRatios.melee}</td></tr>
+                </table>
+              </div>
+            </div>
+
+            <!-- データ2の情報 -->
+            <div>
+              <h5>データ2の情報</h5>
+              <div>
+                <h6>追加効果</h6>
+                <table>
+                  ${Object.entries(effects2).map(([type, effect]) => {
+                    // データ1に同じ効果がない、またはデータ2の効果の方が大きい場合は優位
+                    const isBetter = !effects1[type] || effect.value > effects1[type].value;
+                    return `<tr><td style="${isBetter ? 'color: #4CAF50;' : 'color: #000000;'}">${effect.text.replace('%d', effect.value)}</td></tr>`;
+                  }).join('')}
+                </table>
+              </div>
+              <div>
+                <h6>装備パーツ</h6>
+                <ul>
+                  ${data2.equipped.map(part => part ? `<li>${part.name}</li>` : '').join('')}
+                </ul>
+              </div>
+              <div>
+                <h6>与ダメ割合</h6>
+                <table>
+                  <tr><td>射撃</td><td>${data2.damageRatios.shooting}</td></tr>
+                  <tr><td>格闘</td><td>${data2.damageRatios.fighting}</td></tr>
+                </table>
+              </div>
+              <div>
+                <h6>被ダメ割合</h6>
+                <table>
+                  <tr><td>実弾</td><td>${data2.damageRatios.ballistic}</td></tr>
+                  <tr><td>ビーム</td><td>${data2.damageRatios.beam}</td></tr>
+                  <tr><td>格闘</td><td>${data2.damageRatios.melee}</td></tr>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+
+    // 初期化時にセレクトボックスを更新
+    updateLoadSelects();
+
+    // 所持パーツの状態を管理
+    let ownedParts = JSON.parse(localStorage.getItem('battleOpera2OwnedParts')) || {};
+    customParts.forEach(part => {
+      if (!(part.name in ownedParts)) {
+        ownedParts[part.name] = true; // デフォルトで所持している状態
+      }
+    });
+
+    // 所持状態を保存する関数
+    function saveOwnedParts() {
+      localStorage.setItem('battleOpera2OwnedParts', JSON.stringify(ownedParts));
+    }
+
+    // 所持状態を切り替える関数
+    function toggleOwnedPart(partName) {
+      ownedParts[partName] = !ownedParts[partName];
+      saveOwnedParts();
+    }
+// エンターキー移動（前後両方向対応、スマホ対応含む）
+function setupBidirectionalEnterNavigation() {
+  const allInputs = [
+    'base_hp', 'base_ballistic', 'base_beam', 'base_melee',
+    'base_shooting', 'base_fighting', 'base_speed', 'base_dash',
+    'base_thruster', 'base_turn', 'base_level',
+    'slot_short', 'slot_middle', 'slot_long',
+    'shooting_ratio','fighting_ratio','ballistic_ratio','beam_ratio','melee_ratio'
+  ];
+
+  allInputs.forEach((currentId, index) => {
+    const currentInput = document.getElementById(currentId);
+    if (currentInput) {
+      // PC用のエンターキー移動
+      currentInput.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          
+          let nextIndex;
+          if (event.shiftKey) {
+            // Shift+Enter: 前の入力欄に移動
+            nextIndex = index - 1;
+            if (nextIndex < 0) {
+              nextIndex = allInputs.length - 1; // 最後の入力欄に移動
+            }
+          } else {
+            // Enter: 次の入力欄に移動
+            nextIndex = index + 1;
+            if (nextIndex >= allInputs.length) {
+              nextIndex = 0; // 最初の入力欄に移動
+            }
+          }
+          
+          const targetInput = document.getElementById(allInputs[nextIndex]);
+          if (targetInput) {
+            targetInput.focus();
+            targetInput.select();
+          }
+        }
+      });
+
+      // スマホ用のフォーカス移動（Enterキーでも対応）
+      currentInput.addEventListener('input', function(event) {
+        // スマホの場合、入力完了時に次の欄に移動する処理を追加可能
+      });
+      
+      // フォーカス時に全選択（スマホでも操作しやすく）
+      currentInput.addEventListener('focus', function(event) {
+        setTimeout(() => {
+          event.target.select();
+        }, 100);
+      });
+    }
+  });
+}
+
+// スマホ検出関数
+function isMobile() {
+  return window.innerWidth <= 768;
+}
+
+// カテゴリーセクションの折り畳み機能
+function setupCategoryCollapse() {
+  const categoryHeaders = document.querySelectorAll('.category-section h3');
+  categoryHeaders.forEach(header => {
+    header.addEventListener('click', function() {
+      const section = this.parentElement;
+      section.classList.toggle('collapsed');
+      
+      // スマホでは自動でスクロール調整
+      if (isMobile() && !section.classList.contains('collapsed')) {
+        setTimeout(() => {
+          header.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 300);
+      }
+    });
+  });
+}
+
+// ダブルタップでパーツ装備（スマホ対応）
+function setupDoubleTapEquip() {
+  let lastTap = 0;
+  
+  document.addEventListener('touchend', function(event) {
+    const currentTime = new Date().getTime();
+    const tapLength = currentTime - lastTap;
+    
+    if (tapLength < 500 && tapLength > 0) {
+      // ダブルタップ検出
+      const target = event.target.closest('.part-btn');
+      if (target && !target.classList.contains('disabled')) {
+        event.preventDefault();
+        
+        const partName = target.textContent;
+        const part = customParts.find(p => p.name === partName);
+        if (part && ownedParts[part.name]) {
+          equipPart(part);
+          
+          // パーツ装備後、カテゴリーを自動で閉じる
+          const categorySection = target.closest('.category-section');
+          if (categorySection && isMobile()) {
+            categorySection.classList.add('collapsed');
+          }
+        }
+      }
+    }
+    lastTap = currentTime;
+  });
+}
+
+// 初期化時にスマホ対応機能を設定
+function initializeMobileSupport() {
+  if (isMobile()) {
+    // スマホの場合、デフォルトでカテゴリーを閉じる
+    const categorySection = document.querySelectorAll('.category-section');
+    categorySection.forEach(section => {
+      section.classList.add('collapsed');
+    });
+  }
+  
+  setupCategoryCollapse();
+  setupDoubleTapEquip();
+}
+
+// 実行
+setupBidirectionalEnterNavigation();
+
+// DOMContentLoadedイベントでスマホ対応初期化
+document.addEventListener('DOMContentLoaded', function() {
+  initializeMobileSupport();
+});
+
+// ウィンドウリサイズ時の対応
+window.addEventListener('resize', function() {
+  if (isMobile()) {
+    // スマホサイズになった時の処理
+    const categorySection = document.querySelectorAll('.category-section:not(.collapsed)');
+    if (categorySection.length > 1) {
+      // 複数のカテゴリーが開いている場合は最初の1つ以外を閉じる
+      categorySection.forEach((section, index) => {
+        if (index > 0) {
+          section.classList.add('collapsed');
+        }
+      });
+    }
+  }
+});
+
+// 情報モーダルの制御
+function openInfoModal() {
+  document.getElementById('info-modal').style.display = 'block';
+}
+
+function closeInfoModal() {
+  document.getElementById('info-modal').style.display = 'none';
+}
+
+// イベントリスナーの設定
+document.getElementById('info-btn').addEventListener('click', openInfoModal);
+document.getElementById('info-modal-close').addEventListener('click', closeInfoModal);
+document.getElementById('info-modal-ok').addEventListener('click', closeInfoModal);
+
+
+// モーダル外クリックで閉じる
+window.addEventListener('click', function(event) {
+  const infoModal = document.getElementById('info-modal');
+  if (event.target === infoModal) {
+    closeInfoModal();
+  }
+});
+
+  </script>
+</body>
+</html>
+
+  </script>
+</body>
+</html>
