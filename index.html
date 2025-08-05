@@ -1027,7 +1027,7 @@
 
       
       <h4>更新履歴・その他</h4>
-      <p>最終更新: 2025年8月3日</p>
+      <p>最終更新: 2025年8月1日</p>
       <p>そのうちスマホ対応するかも</p>
       <p>不具合報告や要望は、XのDMまで@8LpdFhYmxHfrOV9</p>
     </div>
@@ -4313,48 +4313,9 @@ function setupBidirectionalEnterNavigation() {
           
           const targetInput = document.getElementById(allInputs[nextIndex]);
           if (targetInput) {
-            // モバイルデバイスの判定
-            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-            
-            if (isMobile) {
-              // スマホの場合：複数段階でフォーカスと選択を確実に実行
-              targetInput.focus();
-              
-              // 段階的な選択処理
-              const selectText = () => {
-                try {
-                  targetInput.setSelectionRange(0, targetInput.value.length);
-                } catch (e) {
-                  // フォールバック
-                  targetInput.select();
-                }
-              };
-              
-              // 即座に実行
-              selectText();
-              
-              // 短い遅延で再実行（iOS対応）
-              setTimeout(selectText, 50);
-              
-              // さらに長い遅延で再実行（確実性向上）
-              if (isIOS) {
-                setTimeout(selectText, 100);
-                setTimeout(selectText, 200);
-              }
-              
-              // フォーカスイベント後の選択処理
-              const onFocus = () => {
-                setTimeout(selectText, 10);
-                targetInput.removeEventListener('focus', onFocus);
-              };
-              targetInput.addEventListener('focus', onFocus);
-              
-            } else {
-              // PCの場合
-              targetInput.focus();
-              targetInput.select();
-            }
+            targetInput.focus();
+            // キーボード描画後でも確実に選択されるよう 0ms 遅延（参考コードと同じ方法）
+            setTimeout(() => targetInput.select(), 0);
           }
         }
       });
@@ -4364,6 +4325,15 @@ function setupBidirectionalEnterNavigation() {
 
 // 実行
 setupBidirectionalEnterNavigation();
+
+// フォーカス時（タップ時）にも全選択（参考コードと同じ方法）
+document.addEventListener('focusin', e => {
+  const el = e.target;
+  // 数値入力欄のみ対象とする
+  if (el.tagName === 'INPUT' && el.type === 'number') {
+    setTimeout(() => el.select(), 0);
+  }
+});
 
 // カテゴリ折りたたみ機能（スマホのみ）
 function setupCategoryCollapse() {
