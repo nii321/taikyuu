@@ -388,41 +388,88 @@
         width: 50px;
       }
 
-      /* 火力指数・耐久指数計算セクションを縦並びに */
-      .damage-ratio-container > div:first-child {
+      /* 火力指数・耐久指数計算セクションのスマホ対応 */
+      .damage-ratio-content {
         display: block !important;
-        gap: 16px !important;
+        gap: 0 !important;
       }
 
-      .damage-ratio-container > div:first-child > div {
-        margin-bottom: 16px;
+      .power-section,
+      .durability-section,
+      .preset-section {
         width: 100% !important;
         flex: none !important;
+        margin-bottom: 16px;
       }
 
-      /* 被ダメ割合プリセットボタンの調整 */
-      .damage-ratio-container > div:first-child > div:last-child {
-        width: 100% !important;
-      }
-
-      .damage-ratio-container > div:first-child > div:last-child > div:last-child {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 4px;
-      }
-
-      /* 火力指数・耐久指数内の割合入力欄を縦並びに */
-      .damage-ratio-container > div:first-child > div:first-child > div,
-      .damage-ratio-container > div:first-child > div:nth-child(2) > div {
-        display: block !important;
+      /* 射撃与ダメ割合・格闘与ダメ割合 - 横並び（グリッド2列） */
+      .damage-input-grid {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 8px !important;
         margin-bottom: 12px !important;
       }
 
-      .damage-ratio-container > div:first-child > div:first-child > div label,
-      .damage-ratio-container > div:first-child > div:nth-child(2) > div label {
+      .damage-input-grid label {
         display: block !important;
-        margin-bottom: 4px !important;
         margin-right: 0 !important;
+        font-size: 14px !important;
+        text-align: center !important;
+      }
+
+      .damage-input-grid input {
+        width: 100% !important;
+        box-sizing: border-box !important;
+        margin-top: 4px !important;
+      }
+
+      /* 火力指数最大化（70%幅）とスラスター最大化（30%幅） - 横並び */
+      .power-buttons {
+        display: flex !important;
+        gap: 8px !important;
+        margin-top: 8px !important;
+      }
+
+      .power-buttons button:first-child {
+        flex: 0.7 !important;
+      }
+
+      .power-buttons button:last-child {
+        flex: 0.3 !important;
+      }
+
+      /* 実弾・ビーム・格闘被ダメ割合 - 横一列（グリッド3列、小さめフォント） */
+      .durability-input-grid {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr 1fr !important;
+        gap: 4px !important;
+        margin-bottom: 12px !important;
+      }
+
+      .durability-input-grid label {
+        display: block !important;
+        margin-right: 0 !important;
+        font-size: 12px !important;
+        text-align: center !important;
+      }
+
+      .durability-input-grid input {
+        width: 100% !important;
+        box-sizing: border-box !important;
+        margin-top: 4px !important;
+        font-size: 12px !important;
+      }
+
+      /* 耐久指数最大化ボタン - 100%幅 */
+      .durability-section button {
+        width: 100% !important;
+      }
+
+      /* 被ダメ割合プリセット - 縦2列グリッド */
+      .preset-grid {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 4px !important;
       }
 
       /* 保存・読み込み機能の調整 */
@@ -577,27 +624,12 @@
         width: 50px;
       }
 
-      /* ラベルの改行調整 */
-      .damage-ratio-container label {
-        display: block;
-        margin-bottom: 8px;
-        margin-right: 0 !important;
-      }
-
       /* 火力指数・耐久指数表示の調整 */
       .power-index-display,
       .durability-index-display {
-        margin-bottom: 8px;
-        padding: 8px;
-        font-size: 14px;
-      }
-
-      /* 最大化ボタンの調整 */
-      .damage-ratio-container button {
-        width: 100%;
-        margin-top: 6px;
-        padding: 6px 12px;
-        font-size: 13px;
+        margin-bottom: 8px !important;
+        padding: 8px !important;
+        font-size: 14px !important;
       }
     }
 
@@ -850,10 +882,10 @@
   <div class="bottom-panel">
     <div class="damage-ratio-container" style="margin: 20px 0; padding: 16px; border: 1px solid #aaa; border-radius: 6px; background: #f8f8ff;">
       <h3>火力指数・耐久指数計算</h3>
-      <div style="display: flex; gap: 24px;">
+      <div class="damage-ratio-content" style="display: flex; gap: 24px;">
         <!-- 火力指数部分 -->
-        <div style="flex: 1;">
-          <div style="margin-bottom: 16px;">
+        <div class="power-section" style="flex: 1;">
+          <div class="damage-input-grid" style="margin-bottom: 16px;">
             <label style="margin-right: 16px;">
               射撃与ダメ割合：
               <input type="number" id="shooting_ratio" value="50" min="0" style="width: 60px;">
@@ -866,22 +898,19 @@
           <div class="power-index-display" style="padding: 12px; background: #fff; border: 1px solid #ddd; border-radius: 4px;">
             <div style="font-weight: bold;">火力指数：<span id="power_index">0</span></div>
           </div>
-          <button id="maximize-power-btn" style="margin-top: 8px; padding: 8px 16px; font-size: 14px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; width: 100%;">
-            火力指数最大化
-          </button>
-                  <!-- スラスター部分 -->
-        <div style="flex: 1;">
-
-          <button id="maximize-thruster-btn" style="margin-top: 8px; padding: 8px 16px; font-size: 14px; background: #FF9800; color: white; border: none; border-radius: 4px; cursor: pointer; width: 100%;">
-            スラスター最大化
-          </button>
-        </div>
-
+          <div class="power-buttons" style="margin-top: 8px;">
+            <button id="maximize-power-btn" style="padding: 8px 16px; font-size: 14px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; width: 100%;">
+              火力指数最大化
+            </button>
+            <button id="maximize-thruster-btn" style="margin-top: 4px; padding: 8px 16px; font-size: 14px; background: #FF9800; color: white; border: none; border-radius: 4px; cursor: pointer; width: 100%;">
+              スラスター最大化
+            </button>
+          </div>
         </div>
 
         <!-- 耐久指数部分 -->
-        <div style="flex: 1;">
-          <div style="margin-bottom: 16px;">
+        <div class="durability-section" style="flex: 1;">
+          <div class="durability-input-grid" style="margin-bottom: 16px;">
             <label style="margin-right: 16px;">
               実弾被ダメ割合：
               <input type="number" id="ballistic_ratio" value="1" min="0" style="width: 60px;">
@@ -904,9 +933,9 @@
         </div>
 
         <!-- 被ダメ割合プリセットボタン -->
-        <div style="width: 200px;">
+        <div class="preset-section" style="width: 200px;">
           <div style="margin-bottom: 8px; font-weight: bold;">被ダメ割合プリセット</div>
-          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px;">
+          <div class="preset-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px;">
             <button onclick="setDamageRatio(50, 10, 40)" style="padding: 4px 8px; font-size: 12px;">300</button>
             <button onclick="setDamageRatio(50, 10, 40)" style="padding: 4px 8px; font-size: 12px;">350</button>
             <button onclick="setDamageRatio(40, 10, 50)" style="padding: 4px 8px; font-size: 12px;">400</button>
