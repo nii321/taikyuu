@@ -433,6 +433,22 @@
 
       .save-load-container > div:first-child > div {
         margin-bottom: 12px;
+        width: 100%;
+      }
+
+      /* 保存・読み込み機能内のボタンと入力欄の調整 */
+      .save-load-container input[type="text"],
+      .save-load-container select {
+        width: 100%;
+        margin-bottom: 8px;
+        margin-right: 0 !important;
+        box-sizing: border-box;
+      }
+
+      .save-load-container button {
+        width: 100%;
+        margin-bottom: 4px;
+        margin-right: 0 !important;
       }
 
       /* 比較機能の調整 */
@@ -443,6 +459,42 @@
 
       .compare-container > div:first-child > div {
         margin-bottom: 12px;
+        width: 100%;
+      }
+
+      /* 比較機能内のセレクトボックスとボタンの調整 */
+      .compare-container select {
+        width: 100%;
+        margin-bottom: 8px;
+        margin-right: 0 !important;
+        box-sizing: border-box;
+      }
+
+      .compare-container button {
+        width: 100%;
+        margin-right: 0 !important;
+      }
+
+      /* コンテナ全体のオーバーフロー対策 */
+      .save-load-container,
+      .compare-container {
+        overflow-x: auto;
+        box-sizing: border-box;
+      }
+
+      /* 比較結果テーブルの調整 */
+      .compare-container table {
+        width: 100%;
+        table-layout: fixed;
+        word-wrap: break-word;
+      }
+
+      .compare-container th,
+      .compare-container td {
+        padding: 2px 4px;
+        font-size: 12px;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
 
       /* 入力欄のサイズ調整 */
@@ -501,12 +553,7 @@
         margin-top: 8px;
       }
 
-      /* 装備中カスタムパーツセクションの調整 */
-      .equipped-section > div:first-child {
-        display: block !important;
-        align-items: stretch !important;
-        gap: 8px !important;
-      }
+      /* 装備中カスタムパーツセクションの調整は不要（既に縦並び） */
 
       /* 比較結果の調整 */
       #compare-content > div:first-child {
@@ -792,12 +839,10 @@
   <div class="bottom-panel">
     <div class="equipped-section">
       <h2>装備中カスタムパーツ（クリックで解除）</h2>
-      <div style="display: flex; align-items: flex-start; gap: 16px;">
-        <div class="equipped-grid" id="equipped-grid"></div>
-        <button id="clear-all-btn" style="padding: 8px 16px; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">
-          全て解除
-        </button>
-      </div>
+      <div class="equipped-grid" id="equipped-grid"></div>
+      <button id="clear-all-btn" style="padding: 8px 16px; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; margin-top: 12px; display: block;">
+        全て解除
+      </button>
     </div>
   </div>
 
@@ -982,7 +1027,7 @@
 
       
       <h4>更新履歴・その他</h4>
-      <p>最終更新: 2025年8月1日</p>
+      <p>最終更新: 2025年8月3日</p>
       <p>そのうちスマホ対応するかも</p>
       <p>不具合報告や要望は、XのDMまで@8LpdFhYmxHfrOV9</p>
     </div>
@@ -4268,21 +4313,46 @@ function setupBidirectionalEnterNavigation() {
           
           const targetInput = document.getElementById(allInputs[nextIndex]);
           if (targetInput) {
-            targetInput.focus();
+            // モバイルデバイスの判定
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
             
-            // スマホ対応の数字選択機能
-            if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-              // モバイルデバイスの場合
-              targetInput.setSelectionRange(0, targetInput.value.length);
+            if (isMobile) {
+              // スマホの場合：複数段階でフォーカスと選択を確実に実行
+              targetInput.focus();
               
-              // iOS対応：少し遅延を入れてもう一度選択を実行
-              if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
-                setTimeout(() => {
+              // 段階的な選択処理
+              const selectText = () => {
+                try {
                   targetInput.setSelectionRange(0, targetInput.value.length);
-                }, 10);
+                } catch (e) {
+                  // フォールバック
+                  targetInput.select();
+                }
+              };
+              
+              // 即座に実行
+              selectText();
+              
+              // 短い遅延で再実行（iOS対応）
+              setTimeout(selectText, 50);
+              
+              // さらに長い遅延で再実行（確実性向上）
+              if (isIOS) {
+                setTimeout(selectText, 100);
+                setTimeout(selectText, 200);
               }
+              
+              // フォーカスイベント後の選択処理
+              const onFocus = () => {
+                setTimeout(selectText, 10);
+                targetInput.removeEventListener('focus', onFocus);
+              };
+              targetInput.addEventListener('focus', onFocus);
+              
             } else {
-              // デスクトップの場合
+              // PCの場合
+              targetInput.focus();
               targetInput.select();
             }
           }
