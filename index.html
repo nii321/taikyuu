@@ -286,6 +286,29 @@
       .category-section h3 {
         font-size: 1em;
         margin-bottom: 6px;
+        cursor: pointer;
+        position: relative;
+        padding-right: 20px;
+        user-select: none;
+      }
+
+      /* 折りたたみアイコン */
+      .category-section h3::after {
+        content: "▼";
+        position: absolute;
+        right: 0;
+        top: 0;
+        font-size: 0.8em;
+        transition: transform 0.2s ease;
+      }
+
+      .category-section.collapsed h3::after {
+        transform: rotate(-90deg);
+      }
+
+      /* 折りたたまれた状態のパーツリスト */
+      .category-section.collapsed .parts-list {
+        display: none;
       }
 
       /* 装備グリッドを縦1列に */
@@ -384,8 +407,22 @@
 
       .damage-ratio-container > div:first-child > div:last-child > div:last-child {
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(2, 1fr);
         gap: 4px;
+      }
+
+      /* 火力指数・耐久指数内の割合入力欄を縦並びに */
+      .damage-ratio-container > div:first-child > div:first-child > div,
+      .damage-ratio-container > div:first-child > div:nth-child(2) > div {
+        display: block !important;
+        margin-bottom: 12px !important;
+      }
+
+      .damage-ratio-container > div:first-child > div:first-child > div label,
+      .damage-ratio-container > div:first-child > div:nth-child(2) > div label {
+        display: block !important;
+        margin-bottom: 4px !important;
+        margin-right: 0 !important;
       }
 
       /* 保存・読み込み機能の調整 */
@@ -2287,26 +2324,20 @@
             btn.classList.add('disabled');
             btn.title = "スロット数が足りません";
           } else {
-            btn.title = "クリックで詳細表示、ダブルクリックで装備";
+            btn.title = "クリックで詳細表示、ダブルクリック・長押しで装備";
           }
+          
           let clickTimer = null;
-          btn.onclick = () => {
-            if (clickTimer === null) {
-              clickTimer = setTimeout(() => {
-                clickTimer = null;
-                openPartModal(part);
-              }, 200);
-            }
-          };
-          btn.ondblclick = () => {
-            if (!canEquipSlots) return; // 未所持でも装備可能にするため、ownedPartsのチェックを削除
-            clearTimeout(clickTimer);
-            clickTimer = null;
+          let longPressTimer = null;
+          let isLongPress = false;
+
+          // 装備処理関数
+          const equipPart = () => {
+            if (!canEquipSlots) return;
             let canEquip =
               !equipped.includes(part) &&
               equipped.filter(e => e).length < 8 &&
               !(part.type && equipped.some(e => e && e.type === part.type)) &&
-              // 補給パックとクイックローダー/補助ジェネレーターの同時装備制限をチェック
               !(part.type === "補給パック" && equipped.some(e => e && (e.name.includes("クイックローダー") || e.name.includes("補助ジェネレーター")))) &&
               !((part.name.includes("クイックローダー") || part.name.includes("補助ジェネレーター")) && equipped.some(e => e && e.type === "補給パック"));
             
@@ -2320,6 +2351,61 @@
               }
             }
           };
+
+          // クリック処理
+          btn.onclick = () => {
+            if (isLongPress) {
+              isLongPress = false;
+              return;
+            }
+            if (clickTimer === null) {
+              clickTimer = setTimeout(() => {
+                clickTimer = null;
+                openPartModal(part);
+              }, 200);
+            }
+          };
+
+          // ダブルクリック処理
+          btn.ondblclick = () => {
+            clearTimeout(clickTimer);
+            clickTimer = null;
+            equipPart();
+          };
+
+          // 長押し開始（マウス・タッチ対応）
+          const startLongPress = (e) => {
+            if (e.type === 'mousedown' && e.button !== 0) return; // 左クリック以外は無視
+            
+            isLongPress = false;
+            longPressTimer = setTimeout(() => {
+              isLongPress = true;
+              // 長押し成功の視覚フィードバック
+              btn.style.backgroundColor = '#c8e6c9';
+              setTimeout(() => {
+                btn.style.backgroundColor = '';
+              }, 150);
+              equipPart();
+            }, 500); // 500ms長押し
+          };
+
+          // 長押し終了
+          const endLongPress = () => {
+            if (longPressTimer) {
+              clearTimeout(longPressTimer);
+              longPressTimer = null;
+            }
+          };
+
+          // タッチイベント（スマホ対応）
+          btn.addEventListener('touchstart', startLongPress, { passive: true });
+          btn.addEventListener('touchend', endLongPress, { passive: true });
+          btn.addEventListener('touchcancel', endLongPress, { passive: true });
+
+          // マウスイベント（PC対応）
+          btn.addEventListener('mousedown', startLongPress);
+          btn.addEventListener('mouseup', endLongPress);
+          btn.addEventListener('mouseleave', endLongPress);
         }
         getCategoryList(part.category).appendChild(btn);
       });
@@ -4183,7 +4269,22 @@ function setupBidirectionalEnterNavigation() {
           const targetInput = document.getElementById(allInputs[nextIndex]);
           if (targetInput) {
             targetInput.focus();
-            targetInput.select();
+            
+            // スマホ対応の数字選択機能
+            if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+              // モバイルデバイスの場合
+              targetInput.setSelectionRange(0, targetInput.value.length);
+              
+              // iOS対応：少し遅延を入れてもう一度選択を実行
+              if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+                setTimeout(() => {
+                  targetInput.setSelectionRange(0, targetInput.value.length);
+                }, 10);
+              }
+            } else {
+              // デスクトップの場合
+              targetInput.select();
+            }
           }
         }
       });
@@ -4193,6 +4294,61 @@ function setupBidirectionalEnterNavigation() {
 
 // 実行
 setupBidirectionalEnterNavigation();
+
+// カテゴリ折りたたみ機能（スマホのみ）
+function setupCategoryCollapse() {
+  // スマホかどうかの判定
+  function isMobile() {
+    return window.innerWidth <= 768;
+  }
+
+  // 初期状態設定（スマホでは最初のカテゴリ以外を折りたたみ）
+  function initializeCategories() {
+    if (isMobile()) {
+      const categories = document.querySelectorAll('.category-section');
+      categories.forEach((category, index) => {
+        if (index > 0) { // 最初のカテゴリ（攻撃系）以外を折りたたみ
+          category.classList.add('collapsed');
+        }
+      });
+    }
+  }
+
+  // カテゴリヘッダーのクリックイベント
+  function setupCategoryClickEvents() {
+    const categoryHeaders = document.querySelectorAll('.category-section h3');
+    categoryHeaders.forEach(header => {
+      header.addEventListener('click', function() {
+        if (isMobile()) { // スマホでのみ動作
+          const categorySection = this.parentElement;
+          categorySection.classList.toggle('collapsed');
+        }
+      });
+    });
+  }
+
+  // ウィンドウリサイズ時の処理
+  function handleResize() {
+    const categories = document.querySelectorAll('.category-section');
+    if (!isMobile()) {
+      // PCモードでは全て展開
+      categories.forEach(category => {
+        category.classList.remove('collapsed');
+      });
+    } else {
+      // スマホモードでは初期状態に戻す
+      initializeCategories();
+    }
+  }
+
+  // 初期化
+  initializeCategories();
+  setupCategoryClickEvents();
+  window.addEventListener('resize', handleResize);
+}
+
+// カテゴリ折りたたみ機能を実行
+setupCategoryCollapse();
 // 情報モーダルの制御
 function openInfoModal() {
   document.getElementById('info-modal').style.display = 'block';
