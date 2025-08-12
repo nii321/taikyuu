@@ -286,30 +286,9 @@
       .category-section h3 {
         font-size: 1em;
         margin-bottom: 6px;
-        cursor: pointer;
-        position: relative;
-        padding-right: 20px;
-        user-select: none;
       }
 
-      /* 折りたたみアイコン */
-      .category-section h3::after {
-        content: "▼";
-        position: absolute;
-        right: 0;
-        top: 0;
-        font-size: 0.8em;
-        transition: transform 0.2s ease;
-      }
 
-      .category-section.collapsed h3::after {
-        transform: rotate(-90deg);
-      }
-
-      /* 折りたたまれた状態のパーツリスト */
-      .category-section.collapsed .parts-list {
-        display: none;
-      }
 
       /* 装備グリッドを縦1列に */
       .equipped-grid {
@@ -4375,110 +4354,7 @@ document.addEventListener('focusin', e => {
   }
 });
 
-// カテゴリ折りたたみ機能（スマホのみ）
-function setupCategoryCollapse() {
-  // スマホかどうかの判定
-  function isMobile() {
-    return window.innerWidth <= 768;
-  }
 
-  // 初期状態設定（スマホでは全てのカテゴリを折りたたみ）
-  function initializeCategories() {
-    if (isMobile()) {
-      const categories = document.querySelectorAll('.category-section');
-      categories.forEach((category) => {
-        category.classList.add('collapsed'); // 全てのカテゴリを折りたたみ
-      });
-    }
-  }
-
-  // カテゴリヘッダーのクリックイベント
-  function setupCategoryClickEvents() {
-    const categoryHeaders = document.querySelectorAll('.category-section h3');
-    categoryHeaders.forEach(header => {
-      let touchStartY = 0;
-      let touchStartX = 0;
-      let touchStartTime = 0;
-      let hasMoved = false;
-
-      // タッチ開始時の記録
-      header.addEventListener('touchstart', function(e) {
-        if (isMobile()) {
-          touchStartY = e.touches[0].clientY;
-          touchStartX = e.touches[0].clientX;
-          touchStartTime = Date.now();
-          hasMoved = false;
-        }
-      }, { passive: true });
-
-      // タッチ移動の検出
-      header.addEventListener('touchmove', function(e) {
-        if (isMobile()) {
-          const touchCurrentY = e.touches[0].clientY;
-          const touchCurrentX = e.touches[0].clientX;
-          const moveDistanceY = Math.abs(touchCurrentY - touchStartY);
-          const moveDistanceX = Math.abs(touchCurrentX - touchStartX);
-          
-          // 5px以上移動した場合は「移動した」と判定
-          if (moveDistanceY > 5 || moveDistanceX > 5) {
-            hasMoved = true;
-          }
-        }
-      }, { passive: true });
-
-      // タッチ終了時の処理
-      header.addEventListener('touchend', function(e) {
-        if (isMobile()) {
-          const touchEndTime = Date.now();
-          const touchDuration = touchEndTime - touchStartTime;
-          
-          // 以下の条件を満たす場合のみ折りたたみを実行
-          // 1. 移動距離が小さい（5px未満）
-          // 2. タッチ時間が短い（500ms未満）
-          // 3. デフォルトのクリック処理を防ぐ
-          if (!hasMoved && touchDuration < 500) {
-            e.preventDefault(); // デフォルトのクリックイベントを防ぐ
-            const categorySection = this.parentElement;
-            categorySection.classList.toggle('collapsed');
-          }
-        }
-      }, { passive: false }); // preventDefaultを使うためpassive: false
-
-      // PC用のクリックイベント（スマホでは無効化）
-      header.addEventListener('click', function(e) {
-        if (!isMobile()) {
-          const categorySection = this.parentElement;
-          categorySection.classList.toggle('collapsed');
-        } else {
-          // スマホでは clickイベントを無効化
-          e.preventDefault();
-        }
-      });
-    });
-  }
-
-  // ウィンドウリサイズ時の処理
-  function handleResize() {
-    const categories = document.querySelectorAll('.category-section');
-    if (!isMobile()) {
-      // PCモードでは全て展開
-      categories.forEach(category => {
-        category.classList.remove('collapsed');
-      });
-    } else {
-      // スマホモードでは初期状態に戻す
-      initializeCategories();
-    }
-  }
-
-  // 初期化
-  initializeCategories();
-  setupCategoryClickEvents();
-  window.addEventListener('resize', handleResize);
-}
-
-// カテゴリ折りたたみ機能を実行
-setupCategoryCollapse();
 // 情報モーダルの制御
 function openInfoModal() {
   document.getElementById('info-modal').style.display = 'block';
