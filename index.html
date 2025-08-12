@@ -2394,6 +2394,9 @@
           let clickTimer = null;
           let longPressTimer = null;
           let isLongPress = false;
+          let isScrolling = false;
+          let touchStartY = 0;
+          let touchStartX = 0;
 
           // 装備処理関数
           const equipPart = () => {
@@ -2422,6 +2425,10 @@
               isLongPress = false;
               return;
             }
+            // スクロール中はクリック処理を無効化
+            if (isScrolling) {
+              return;
+            }
             if (clickTimer === null) {
               clickTimer = setTimeout(() => {
                 clickTimer = null;
@@ -2432,6 +2439,10 @@
 
           // ダブルクリック処理
           btn.ondblclick = () => {
+            // スクロール中はダブルクリック処理を無効化
+            if (isScrolling) {
+              return;
+            }
             clearTimeout(clickTimer);
             clickTimer = null;
             equipPart();
@@ -2442,15 +2453,45 @@
             if (e.type === 'mousedown' && e.button !== 0) return; // 左クリック以外は無視
             
             isLongPress = false;
+            isScrolling = false;
+            
+            // タッチ開始位置を記録（スクロール検知用）
+            if (e.type === 'touchstart' && e.touches && e.touches[0]) {
+              touchStartY = e.touches[0].clientY;
+              touchStartX = e.touches[0].clientX;
+            }
+            
             longPressTimer = setTimeout(() => {
-              isLongPress = true;
-              // 長押し成功の視覚フィードバック
-              btn.style.backgroundColor = '#c8e6c9';
-              setTimeout(() => {
-                btn.style.backgroundColor = '';
-              }, 150);
-              equipPart();
+              if (!isScrolling) { // スクロール中でなければ装備実行
+                isLongPress = true;
+                // 長押し成功の視覚フィードバック
+                btn.style.backgroundColor = '#c8e6c9';
+                setTimeout(() => {
+                  btn.style.backgroundColor = '';
+                }, 150);
+                equipPart();
+              }
             }, 500); // 500ms長押し
+          };
+
+          // スクロール検知
+          const handleTouchMove = (e) => {
+            if (e.touches && e.touches[0]) {
+              const touchY = e.touches[0].clientY;
+              const touchX = e.touches[0].clientX;
+              const deltaY = Math.abs(touchY - touchStartY);
+              const deltaX = Math.abs(touchX - touchStartX);
+              
+              // 10px以上移動したらスクロールと判定
+              if (deltaY > 10 || deltaX > 10) {
+                isScrolling = true;
+                // スクロール検知時は長押しタイマーをキャンセル
+                if (longPressTimer) {
+                  clearTimeout(longPressTimer);
+                  longPressTimer = null;
+                }
+              }
+            }
           };
 
           // 長押し終了
@@ -2462,11 +2503,13 @@
             // 長押しフラグをリセット（短時間後にリセットして誤動作を防ぐ）
             setTimeout(() => {
               isLongPress = false;
+              isScrolling = false; // スクロール状態もリセット
             }, 50);
           };
 
           // タッチイベント（スマホ対応）
           btn.addEventListener('touchstart', startLongPress, { passive: true });
+          btn.addEventListener('touchmove', handleTouchMove, { passive: true });
           btn.addEventListener('touchend', endLongPress, { passive: true });
           btn.addEventListener('touchcancel', endLongPress, { passive: true });
 
