@@ -1048,7 +1048,7 @@
       <p><strong>火力指数</strong>：射撃・格闘の与ダメージ割合を設定して計算されます</p>
       <p><strong>耐久指数</strong>：実弾・ビーム・格闘の被ダメージ割合を設定して計算されます</p>
       <p>「最大化」ボタンで自動的に最適なパーツを装備できます</p>
-　　　<p>※拡張装甲で空きスロットが多いと、計算にかなり時間がかかります。</p>
+      <p>※拡張装甲で空きスロットが多いと、計算にかなり時間がかかります。</p>
       
       <h4>保存・読み込み機能</h4>
       <p>機体情報を保存して後で読み込むことができます。比較機能もあるよ</p>
@@ -1056,8 +1056,8 @@
 
       
       <h4>更新履歴・その他</h4>
-      <p>最終更新: 2025年8月1日</p>
-      <p>そのうちスマホ対応するかも</p>
+      <p>最終更新: 2025年8月7日</p>
+      <p>スマホでも使いやすくなりました</p>
       <p>不具合報告や要望は、XのDMまで@8LpdFhYmxHfrOV9</p>
     </div>
     <div class="modal-footer">
@@ -1310,6 +1310,17 @@
           base: { fighting: 8 },
           perLevel: { fighting: 2 },
           maxBonus: { fighting: 16 }
+        },
+        category: "attackparts", useAttackParts: true
+      },
+      {
+        name: "レベルリンクシステム［射撃］",
+        type: "レベルリンクシステム",
+        slot: { short: 1, middle: 3, long: 3 },
+        levelEffects: {
+          base: { shooting: 8 },
+          perLevel: { shooting: 2 },
+          maxBonus: { shooting: 16 }
         },
         category: "attackparts", useAttackParts: true
       },
@@ -2398,12 +2409,10 @@
             btn.classList.add('disabled');
             btn.title = "スロット数が足りません";
           } else {
-            btn.title = "クリックで詳細表示、ダブルクリック・長押しで装備";
+            btn.title = "クリックで詳細表示、ダブルクリックで装備";
           }
           
           let clickTimer = null;
-          let longPressTimer = null;
-          let isLongPress = false;
 
           // 装備処理関数
           const equipPart = () => {
@@ -2428,10 +2437,6 @@
 
           // クリック処理
           btn.onclick = () => {
-            if (isLongPress) {
-              isLongPress = false;
-              return;
-            }
             if (clickTimer === null) {
               clickTimer = setTimeout(() => {
                 clickTimer = null;
@@ -2447,39 +2452,7 @@
             equipPart();
           };
 
-          // 長押し開始（マウス・タッチ対応）
-          const startLongPress = (e) => {
-            if (e.type === 'mousedown' && e.button !== 0) return; // 左クリック以外は無視
-            
-            isLongPress = false;
-            longPressTimer = setTimeout(() => {
-              isLongPress = true;
-              // 長押し成功の視覚フィードバック
-              btn.style.backgroundColor = '#c8e6c9';
-              setTimeout(() => {
-                btn.style.backgroundColor = '';
-              }, 150);
-              equipPart();
-            }, 500); // 500ms長押し
-          };
 
-          // 長押し終了
-          const endLongPress = () => {
-            if (longPressTimer) {
-              clearTimeout(longPressTimer);
-              longPressTimer = null;
-            }
-          };
-
-          // タッチイベント（スマホ対応）
-          btn.addEventListener('touchstart', startLongPress, { passive: true });
-          btn.addEventListener('touchend', endLongPress, { passive: true });
-          btn.addEventListener('touchcancel', endLongPress, { passive: true });
-
-          // マウスイベント（PC対応）
-          btn.addEventListener('mousedown', startLongPress);
-          btn.addEventListener('mouseup', endLongPress);
-          btn.addEventListener('mouseleave', endLongPress);
         }
         getCategoryList(part.category).appendChild(btn);
       });
@@ -4371,14 +4344,12 @@ function setupCategoryCollapse() {
     return window.innerWidth <= 768;
   }
 
-  // 初期状態設定（スマホでは最初のカテゴリ以外を折りたたみ）
+  // 初期状態設定（スマホでは全てのカテゴリを折りたたみ）
   function initializeCategories() {
     if (isMobile()) {
       const categories = document.querySelectorAll('.category-section');
-      categories.forEach((category, index) => {
-        if (index > 0) { // 最初のカテゴリ（攻撃系）以外を折りたたみ
-          category.classList.add('collapsed');
-        }
+      categories.forEach((category) => {
+        category.classList.add('collapsed'); // 全てのカテゴリを折りたたみ
       });
     }
   }
@@ -4448,3 +4419,6 @@ window.addEventListener('click', function(event) {
   </script>
 </body>
 </html>
+
+
+
