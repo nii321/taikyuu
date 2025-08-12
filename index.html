@@ -1056,7 +1056,7 @@
 
       
       <h4>更新履歴・その他</h4>
-      <p>最終更新: 2025年8月11日</p>
+      <p>最終更新: 2025年8月7日</p>
       <p>スマホでも使いやすくなりました</p>
       <p>不具合報告や要望は、XのDMまで@8LpdFhYmxHfrOV9</p>
     </div>
@@ -4396,58 +4396,63 @@ function setupCategoryCollapse() {
   function setupCategoryClickEvents() {
     const categoryHeaders = document.querySelectorAll('.category-section h3');
     categoryHeaders.forEach(header => {
-      let touchStartData = null;
-      
-      // タッチ開始時の情報を記録
+      let touchStartY = 0;
+      let touchStartX = 0;
+      let touchStartTime = 0;
+      let hasMoved = false;
+
+      // タッチ開始時の記録
       header.addEventListener('touchstart', function(e) {
         if (isMobile()) {
-          touchStartData = {
-            x: e.touches[0].clientX,
-            y: e.touches[0].clientY,
-            time: Date.now()
-          };
+          touchStartY = e.touches[0].clientY;
+          touchStartX = e.touches[0].clientX;
+          touchStartTime = Date.now();
+          hasMoved = false;
         }
       }, { passive: true });
-      
-      // タッチ終了時にスクロールかタップかを判定
+
+      // タッチ移動の検出
+      header.addEventListener('touchmove', function(e) {
+        if (isMobile()) {
+          const touchCurrentY = e.touches[0].clientY;
+          const touchCurrentX = e.touches[0].clientX;
+          const moveDistanceY = Math.abs(touchCurrentY - touchStartY);
+          const moveDistanceX = Math.abs(touchCurrentX - touchStartX);
+          
+          // 5px以上移動した場合は「移動した」と判定
+          if (moveDistanceY > 5 || moveDistanceX > 5) {
+            hasMoved = true;
+          }
+        }
+      }, { passive: true });
+
+      // タッチ終了時の処理
       header.addEventListener('touchend', function(e) {
-        if (isMobile() && touchStartData) {
-          const touchEndData = {
-            x: e.changedTouches[0].clientX,
-            y: e.changedTouches[0].clientY,
-            time: Date.now()
-          };
+        if (isMobile()) {
+          const touchEndTime = Date.now();
+          const touchDuration = touchEndTime - touchStartTime;
           
-          const distance = Math.sqrt(
-            Math.pow(touchEndData.x - touchStartData.x, 2) + 
-            Math.pow(touchEndData.y - touchStartData.y, 2)
-          );
-          const duration = touchEndData.time - touchStartData.time;
-          
-          // 移動距離が10px以下かつ、タッチ時間が500ms以下の場合のみタップと判定
-          if (distance <= 10 && duration <= 500) {
+          // 以下の条件を満たす場合のみ折りたたみを実行
+          // 1. 移動距離が小さい（5px未満）
+          // 2. タッチ時間が短い（500ms未満）
+          // 3. デフォルトのクリック処理を防ぐ
+          if (!hasMoved && touchDuration < 500) {
+            e.preventDefault(); // デフォルトのクリックイベントを防ぐ
             const categorySection = this.parentElement;
             categorySection.classList.toggle('collapsed');
           }
-          
-          touchStartData = null;
         }
-      }, { passive: true });
-      
-      // タッチキャンセル時にデータをリセット
-      header.addEventListener('touchcancel', function() {
-        touchStartData = null;
-      }, { passive: true });
-      
-      // PC用のクリックイベント（従来通り）
+      }, { passive: false }); // preventDefaultを使うためpassive: false
+
+      // PC用のクリックイベント（スマホでは無効化）
       header.addEventListener('click', function(e) {
         if (!isMobile()) {
-          // PCでは何もしない（元々スマホのみの機能）
-          return;
+          const categorySection = this.parentElement;
+          categorySection.classList.toggle('collapsed');
+        } else {
+          // スマホでは clickイベントを無効化
+          e.preventDefault();
         }
-        
-        // スマホでのクリックイベントは、タッチイベントで処理済みなので無視
-        e.preventDefault();
       });
     });
   }
@@ -4504,7 +4509,6 @@ window.addEventListener('click', function(event) {
   </script>
 </body>
 </html>
-
 
 
 
