@@ -2459,6 +2459,10 @@
               clearTimeout(longPressTimer);
               longPressTimer = null;
             }
+            // 長押しフラグをリセット（短時間後にリセットして誤動作を防ぐ）
+            setTimeout(() => {
+              isLongPress = false;
+            }, 50);
           };
 
           // タッチイベント（スマホ対応）
