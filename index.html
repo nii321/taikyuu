@@ -1038,7 +1038,7 @@
       <ul>
         <li>まずは機体ステータスを入力してください。</li>
         <li>エンターキーで次の入力欄にいけます。シフト＋エンターで1つ戻る。</li>
-        <li><strong>パーツ装備</strong>：パーツをクリックで詳細表示、ダブルクリックで装備</li>
+        <li><strong>パーツ装備</strong>：パーツをクリックで詳細表示、ダブルクリックまたは長押しで装備</li>
         <li><strong>パーツ解除</strong>：装備中パーツをクリックで解除</li>
         <li><strong>未所持設定</strong>：パーツ詳細画面で「未所持」ボタンをクリック　未所持パーツは自動装備されなくなります。未所持設定は保存されます。</li>
         <li>パーツ詳細は画面のどこをクリックしても閉じられます。</li>
@@ -2409,10 +2409,12 @@
             btn.classList.add('disabled');
             btn.title = "スロット数が足りません";
           } else {
-            btn.title = "クリックで詳細表示、ダブルクリックで装備";
+            btn.title = "クリックで詳細表示、ダブルクリック・長押しで装備";
           }
           
           let clickTimer = null;
+          let longPressTimer = null;
+          let isLongPress = false;
 
           // 装備処理関数
           const equipPart = () => {
@@ -2437,6 +2439,10 @@
 
           // クリック処理
           btn.onclick = () => {
+            if (isLongPress) {
+              isLongPress = false;
+              return;
+            }
             if (clickTimer === null) {
               clickTimer = setTimeout(() => {
                 clickTimer = null;
@@ -2452,7 +2458,39 @@
             equipPart();
           };
 
+          // 長押し開始（マウス・タッチ対応）
+          const startLongPress = (e) => {
+            if (e.type === 'mousedown' && e.button !== 0) return; // 左クリック以外は無視
+            
+            isLongPress = false;
+            longPressTimer = setTimeout(() => {
+              isLongPress = true;
+              // 長押し成功の視覚フィードバック
+              btn.style.backgroundColor = '#c8e6c9';
+              setTimeout(() => {
+                btn.style.backgroundColor = '';
+              }, 150);
+              equipPart();
+            }, 500); // 500ms長押し
+          };
 
+          // 長押し終了
+          const endLongPress = () => {
+            if (longPressTimer) {
+              clearTimeout(longPressTimer);
+              longPressTimer = null;
+            }
+          };
+
+          // タッチイベント（スマホ対応）
+          btn.addEventListener('touchstart', startLongPress, { passive: true });
+          btn.addEventListener('touchend', endLongPress, { passive: true });
+          btn.addEventListener('touchcancel', endLongPress, { passive: true });
+
+          // マウスイベント（PC対応）
+          btn.addEventListener('mousedown', startLongPress);
+          btn.addEventListener('mouseup', endLongPress);
+          btn.addEventListener('mouseleave', endLongPress);
         }
         getCategoryList(part.category).appendChild(btn);
       });
@@ -4354,49 +4392,62 @@ function setupCategoryCollapse() {
     }
   }
 
-  // カテゴリヘッダーのクリックイベント（スクロール対応）
+  // カテゴリヘッダーのクリックイベント
   function setupCategoryClickEvents() {
     const categoryHeaders = document.querySelectorAll('.category-section h3');
     categoryHeaders.forEach(header => {
-      let touchStartY = 0;
-      let touchStartX = 0;
-      let touchMoved = false;
+      let touchStartData = null;
       
-      // タッチ開始
+      // タッチ開始時の情報を記録
       header.addEventListener('touchstart', function(e) {
-        touchStartY = e.touches[0].clientY;
-        touchStartX = e.touches[0].clientX;
-        touchMoved = false;
-      }, { passive: true });
-      
-      // タッチ移動
-      header.addEventListener('touchmove', function(e) {
-        const deltaY = Math.abs(e.touches[0].clientY - touchStartY);
-        const deltaX = Math.abs(e.touches[0].clientX - touchStartX);
-        // 10px以上移動した場合はスクロールと判定
-        if (deltaY > 10 || deltaX > 10) {
-          touchMoved = true;
+        if (isMobile()) {
+          touchStartData = {
+            x: e.touches[0].clientX,
+            y: e.touches[0].clientY,
+            time: Date.now()
+          };
         }
       }, { passive: true });
       
-      // タッチ終了（タップ判定）
+      // タッチ終了時にスクロールかタップかを判定
       header.addEventListener('touchend', function(e) {
-        e.preventDefault(); // デフォルトのクリックイベントを防ぐ
-        if (isMobile() && !touchMoved) { // スマホでスクロールしていない場合のみ
-          const categorySection = this.parentElement;
-          categorySection.classList.toggle('collapsed');
+        if (isMobile() && touchStartData) {
+          const touchEndData = {
+            x: e.changedTouches[0].clientX,
+            y: e.changedTouches[0].clientY,
+            time: Date.now()
+          };
+          
+          const distance = Math.sqrt(
+            Math.pow(touchEndData.x - touchStartData.x, 2) + 
+            Math.pow(touchEndData.y - touchStartData.y, 2)
+          );
+          const duration = touchEndData.time - touchStartData.time;
+          
+          // 移動距離が10px以下かつ、タッチ時間が500ms以下の場合のみタップと判定
+          if (distance <= 10 && duration <= 500) {
+            const categorySection = this.parentElement;
+            categorySection.classList.toggle('collapsed');
+          }
+          
+          touchStartData = null;
         }
-      });
+      }, { passive: true });
       
-      // PC用のクリックイベント
+      // タッチキャンセル時にデータをリセット
+      header.addEventListener('touchcancel', function() {
+        touchStartData = null;
+      }, { passive: true });
+      
+      // PC用のクリックイベント（従来通り）
       header.addEventListener('click', function(e) {
-        // タッチデバイスの場合はtouchendで処理するため、ここでは何もしない
-        if ('ontouchstart' in window) return;
-        
-        if (isMobile()) { // スマホでのみ動作
-          const categorySection = this.parentElement;
-          categorySection.classList.toggle('collapsed');
+        if (!isMobile()) {
+          // PCでは何もしない（元々スマホのみの機能）
+          return;
         }
+        
+        // スマホでのクリックイベントは、タッチイベントで処理済みなので無視
+        e.preventDefault();
       });
     });
   }
