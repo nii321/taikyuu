@@ -202,6 +202,38 @@
       margin-bottom: 8px;
       color: #333;
       font-size: 1.1em;
+      cursor: pointer;
+      user-select: none;
+      position: relative;
+      padding-right: 20px;
+      transition: color 0.2s ease;
+    }
+
+    .category-section h3:hover {
+      color: #666;
+    }
+
+    .category-section h3::after {
+      content: '▼';
+      position: absolute;
+      right: 0;
+      top: 0;
+      font-size: 12px;
+      transition: transform 0.3s ease;
+    }
+
+    .category-section.collapsed h3::after {
+      transform: rotate(-90deg);
+    }
+
+    .category-content {
+      overflow: hidden;
+      transition: max-height 0.3s ease, opacity 0.3s ease;
+    }
+
+    .category-content.collapsed {
+      max-height: 0;
+      opacity: 0;
     }
 
     /* 新しいレイアウト用のスタイル */
@@ -822,25 +854,35 @@
     <div class="left-panel">
       <h2>カスタムパーツ一覧</h2>
       <div class="parts-categories">
-        <div class="category-section">
+        <div class="category-section collapsed">
           <h3>攻撃系パーツ</h3>
-          <div class="parts-list" id="parts-list-attack"></div>
+          <div class="category-content collapsed">
+            <div class="parts-list" id="parts-list-attack"></div>
+          </div>
         </div>
-        <div class="category-section">
+        <div class="category-section collapsed">
           <h3>防御系パーツ</h3>
-          <div class="parts-list" id="parts-list-defense"></div>
+          <div class="category-content collapsed">
+            <div class="parts-list" id="parts-list-defense"></div>
+          </div>
         </div>
-        <div class="category-section">
+        <div class="category-section collapsed">
           <h3>移動系パーツ</h3>
-          <div class="parts-list" id="parts-list-move"></div>
+          <div class="category-content collapsed">
+            <div class="parts-list" id="parts-list-move"></div>
+          </div>
         </div>
-        <div class="category-section">
+        <div class="category-section collapsed">
           <h3>補助系パーツ</h3>
-          <div class="parts-list" id="parts-list-auxiliary"></div>
+          <div class="category-content collapsed">
+            <div class="parts-list" id="parts-list-auxiliary"></div>
+          </div>
         </div>
-        <div class="category-section">
+        <div class="category-section collapsed">
           <h3>特殊系パーツ</h3>
-          <div class="parts-list" id="parts-list-special"></div>
+          <div class="category-content collapsed">
+            <div class="parts-list" id="parts-list-special"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -4423,6 +4465,40 @@ window.addEventListener('click', function(event) {
   if (event.target === infoModal) {
     closeInfoModal();
   }
+});
+
+// カテゴリー折りたたみ機能
+function setupCategoryCollapse() {
+  const categoryHeaders = document.querySelectorAll('.category-section h3');
+  
+  categoryHeaders.forEach(header => {
+    header.addEventListener('click', function() {
+      const categorySection = this.parentElement;
+      const categoryContent = categorySection.querySelector('.category-content');
+      
+      // 折りたたみ状態を切り替え
+      categorySection.classList.toggle('collapsed');
+      categoryContent.classList.toggle('collapsed');
+      
+      // アニメーション用のmax-heightを設定
+      if (categoryContent.classList.contains('collapsed')) {
+        categoryContent.style.maxHeight = '0';
+      } else {
+        categoryContent.style.maxHeight = categoryContent.scrollHeight + 'px';
+      }
+    });
+  });
+  
+  // 初期状態で全て折りたたまれた状態に設定
+  const categoryContents = document.querySelectorAll('.category-content');
+  categoryContents.forEach(content => {
+    content.style.maxHeight = '0';
+  });
+}
+
+// ページロード後に折りたたみ機能を初期化
+window.addEventListener('load', function() {
+  setupCategoryCollapse();
 });
 
   </script>
