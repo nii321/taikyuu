@@ -4354,11 +4354,45 @@ function setupCategoryCollapse() {
     }
   }
 
-  // カテゴリヘッダーのクリックイベント
+  // カテゴリヘッダーのクリックイベント（スクロール対応）
   function setupCategoryClickEvents() {
     const categoryHeaders = document.querySelectorAll('.category-section h3');
     categoryHeaders.forEach(header => {
-      header.addEventListener('click', function() {
+      let touchStartY = 0;
+      let touchStartX = 0;
+      let touchMoved = false;
+      
+      // タッチ開始
+      header.addEventListener('touchstart', function(e) {
+        touchStartY = e.touches[0].clientY;
+        touchStartX = e.touches[0].clientX;
+        touchMoved = false;
+      }, { passive: true });
+      
+      // タッチ移動
+      header.addEventListener('touchmove', function(e) {
+        const deltaY = Math.abs(e.touches[0].clientY - touchStartY);
+        const deltaX = Math.abs(e.touches[0].clientX - touchStartX);
+        // 10px以上移動した場合はスクロールと判定
+        if (deltaY > 10 || deltaX > 10) {
+          touchMoved = true;
+        }
+      }, { passive: true });
+      
+      // タッチ終了（タップ判定）
+      header.addEventListener('touchend', function(e) {
+        e.preventDefault(); // デフォルトのクリックイベントを防ぐ
+        if (isMobile() && !touchMoved) { // スマホでスクロールしていない場合のみ
+          const categorySection = this.parentElement;
+          categorySection.classList.toggle('collapsed');
+        }
+      });
+      
+      // PC用のクリックイベント
+      header.addEventListener('click', function(e) {
+        // タッチデバイスの場合はtouchendで処理するため、ここでは何もしない
+        if ('ontouchstart' in window) return;
+        
         if (isMobile()) { // スマホでのみ動作
           const categorySection = this.parentElement;
           categorySection.classList.toggle('collapsed');
