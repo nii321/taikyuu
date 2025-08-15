@@ -2,8 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>バトオペ2 カスタムパーツ仮組みツール</title>
   <style>
     body { font-family: sans-serif; margin: 24px; }
@@ -203,6 +202,72 @@
       margin-bottom: 8px;
       color: #333;
       font-size: 1.1em;
+      cursor: pointer;
+      user-select: none;
+      position: relative;
+      padding-right: 20px;
+      transition: color 0.2s ease;
+    }
+
+    .category-section h3:hover {
+      color: #666;
+    }
+
+    .category-section h3::after {
+      content: '▼';
+      position: absolute;
+      right: 0;
+      top: 0;
+      font-size: 12px;
+      transition: transform 0.3s ease;
+    }
+
+    .category-section.collapsed h3::after {
+      transform: rotate(-90deg);
+    }
+
+    .category-content {
+      overflow: hidden;
+      transition: max-height 0.3s ease, opacity 0.3s ease;
+    }
+
+    .category-content.collapsed {
+      max-height: 0;
+      opacity: 0;
+    }
+
+    /* PC用：デフォルトで展開状態 */
+    @media (min-width: 769px) {
+      .category-content {
+        max-height: none;
+        opacity: 1;
+      }
+      
+      .category-section.collapsed .category-content {
+        max-height: 0;
+        opacity: 0;
+      }
+    }
+
+    /* スマホ用：デフォルトで折りたたみ状態 */
+    @media (max-width: 768px) {
+      .category-section h3::after {
+        transform: rotate(-90deg);
+      }
+      
+      .category-content {
+        max-height: 0;
+        opacity: 0;
+      }
+      
+      .category-section.expanded .category-content {
+        max-height: none;
+        opacity: 1;
+      }
+      
+      .category-section.expanded h3::after {
+        transform: rotate(0deg);
+      }
     }
 
     /* 新しいレイアウト用のスタイル */
@@ -214,17 +279,403 @@
     .left-panel {
       flex: 1;
       min-width: 300px;
+      order: 1;  /* PC用：左に表示 */
     }
 
     .right-panel {
       flex: 1;
       min-width: 300px;
       max-width: 600px;
+      order: 2;  /* PC用：右に表示 */
     }
 
     .bottom-panel {
       margin-top: 24px;
       width: 100%;
+    }
+
+    /* スマホ対応のメディアクエリ */
+    @media (max-width: 768px) {
+      body {
+        margin: 12px;
+        font-size: 14px;
+      }
+
+      /* メインコンテナを縦並びに */
+      .main-container {
+        display: block;
+        gap: 0;
+      }
+
+      .left-panel,
+      .right-panel {
+        width: 100%;
+        max-width: none;
+        min-width: auto;
+        margin-bottom: 16px;
+      }
+
+      /* スマホでの表示順序調整 */
+      .right-panel {
+        order: 1;  /* スマホ用：最初に表示（機体情報） */
+      }
+
+      .left-panel {
+        order: 2;  /* スマホ用：2番目に表示（カスタムパーツ一覧） */
+      }
+
+      .bottom-panel {
+        margin-top: 16px;
+      }
+
+      /* カスタムパーツ一覧を縦並びに */
+      .parts-list {
+        display: block;
+        gap: 4px;
+      }
+
+      .part-btn {
+        display: block;
+        width: 100%;
+        margin-bottom: 4px;
+        padding: 8px 12px;
+        text-align: left;
+        font-size: 14px;
+      }
+
+      /* カテゴリーセクションの調整 */
+      .category-section {
+        padding: 8px;
+        margin-bottom: 8px;
+      }
+
+      .category-section h3 {
+        font-size: 1em;
+        margin-bottom: 6px;
+      }
+
+
+
+      /* 装備グリッドを縦1列に */
+      .equipped-grid {
+        display: block;
+        grid-template-columns: none;
+        grid-template-rows: none;
+        gap: 4px;
+      }
+
+      .slot {
+        width: 100%;
+        margin-bottom: 4px;
+        min-height: 32px;
+        font-size: 14px;
+      }
+
+      /* 機体情報テーブルの調整 */
+      table {
+        font-size: 14px;
+      }
+
+      th, td {
+        padding: 4px 6px;
+      }
+
+      /* セクションパディングの縮小 */
+      .status-section,
+      .equipped-section {
+        padding: 12px;
+        margin-bottom: 12px;
+      }
+
+      .status-section h2 {
+        font-size: 1.2em;
+        margin-bottom: 8px;
+      }
+
+      /* 拡張スキル・強化段階セクションの調整 */
+      .expansion-skill-select,
+      .enhance-stage-select {
+        padding: 6px;
+        margin: 8px 0;
+        font-size: 14px;
+      }
+
+      /* 拡張スキル選択の縦並び調整 */
+      .expansion-skill-row {
+        display: block;
+      }
+
+      .expansion-skill-row label {
+        display: block;
+        margin-bottom: 4px;
+        margin-left: 0 !important;
+      }
+
+      .expansion-skill-row select {
+        display: block;
+        width: 100%;
+        margin-bottom: 8px;
+      }
+
+      /* 強化段階選択の調整 */
+      .enhance-stage-select label {
+        display: block;
+        margin-bottom: 4px;
+      }
+
+      .enhance-stage-select select {
+        display: block;
+        width: 100%;
+      }
+
+      /* スロット使用状況テーブルの調整 */
+      .slot-usage-table input[type="number"] {
+        width: 50px;
+      }
+
+      /* 火力指数・耐久指数計算セクションのスマホ対応 */
+      .damage-ratio-content {
+        display: block !important;
+        gap: 0 !important;
+      }
+
+      .power-section,
+      .durability-section,
+      .preset-section {
+        width: 100% !important;
+        flex: none !important;
+        margin-bottom: 16px;
+      }
+
+      /* 射撃与ダメ割合・格闘与ダメ割合 - 横並び（グリッド2列） */
+      .damage-input-grid {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 8px !important;
+        margin-bottom: 12px !important;
+      }
+
+      .damage-input-grid label {
+        display: block !important;
+        margin-right: 0 !important;
+        font-size: 14px !important;
+        text-align: center !important;
+      }
+
+      .damage-input-grid input {
+        width: 100% !important;
+        box-sizing: border-box !important;
+        margin-top: 4px !important;
+      }
+
+      /* 火力指数最大化（70%幅）とスラスター最大化（30%幅） - 横並び */
+      .power-buttons {
+        display: flex !important;
+        gap: 8px !important;
+        margin-top: 8px !important;
+      }
+
+      .power-buttons button:first-child {
+        flex: 0.7 !important;
+      }
+
+      .power-buttons button:last-child {
+        flex: 0.3 !important;
+      }
+
+      /* 実弾・ビーム・格闘被ダメ割合 - 横一列（グリッド3列、小さめフォント） */
+      .durability-input-grid {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr 1fr !important;
+        gap: 4px !important;
+        margin-bottom: 12px !important;
+      }
+
+      .durability-input-grid label {
+        display: block !important;
+        margin-right: 0 !important;
+        font-size: 12px !important;
+        text-align: center !important;
+      }
+
+      .durability-input-grid input {
+        width: 100% !important;
+        box-sizing: border-box !important;
+        margin-top: 4px !important;
+        font-size: 12px !important;
+      }
+
+      /* 耐久指数最大化ボタン - 100%幅 */
+      .durability-section button {
+        width: 100% !important;
+      }
+
+      /* 被ダメ割合プリセット - 縦2列グリッド */
+      .preset-grid {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 4px !important;
+      }
+
+      /* 保存・読み込み機能の調整 */
+      .save-load-container > div:first-child {
+        display: block !important;
+        gap: 12px !important;
+      }
+
+      .save-load-container > div:first-child > div {
+        margin-bottom: 12px;
+        width: 100%;
+      }
+
+      /* 保存・読み込み機能内のボタンと入力欄の調整 */
+      .save-load-container input[type="text"],
+      .save-load-container select {
+        width: 100%;
+        margin-bottom: 8px;
+        margin-right: 0 !important;
+        box-sizing: border-box;
+      }
+
+      .save-load-container button {
+        width: 100%;
+        margin-bottom: 4px;
+        margin-right: 0 !important;
+      }
+
+      /* 比較機能の調整 */
+      .compare-container > div:first-child {
+        display: block !important;
+        gap: 12px !important;
+      }
+
+      .compare-container > div:first-child > div {
+        margin-bottom: 12px;
+        width: 100%;
+      }
+
+      /* 比較機能内のセレクトボックスとボタンの調整 */
+      .compare-container select {
+        width: 100%;
+        margin-bottom: 8px;
+        margin-right: 0 !important;
+        box-sizing: border-box;
+      }
+
+      .compare-container button {
+        width: 100%;
+        margin-right: 0 !important;
+      }
+
+      /* コンテナ全体のオーバーフロー対策 */
+      .save-load-container,
+      .compare-container {
+        overflow-x: auto;
+        box-sizing: border-box;
+      }
+
+      /* 比較結果テーブルの調整 */
+      .compare-container table {
+        width: 100%;
+        table-layout: fixed;
+        word-wrap: break-word;
+      }
+
+      .compare-container th,
+      .compare-container td {
+        padding: 2px 4px;
+        font-size: 12px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      /* 入力欄のサイズ調整 */
+      input[type="number"],
+      input[type="text"],
+      select {
+        font-size: 14px;
+        padding: 4px 6px;
+      }
+
+      /* ボタンの調整 */
+      button {
+        font-size: 14px;
+        padding: 6px 12px;
+      }
+
+      /* 追加効果表示の調整 */
+      .special-effects {
+        min-width: auto;
+        padding: 12px;
+      }
+
+      .special-effect-item {
+        padding: 6px;
+        margin-bottom: 6px;
+        font-size: 13px;
+      }
+
+      /* モーダルの調整 */
+      .modal-content {
+        width: 90%;
+        margin: 5% auto;
+        padding: 16px;
+      }
+
+      /* 情報モーダルの調整 */
+      .modal-content[style*="width: 600px"] {
+        width: 95% !important;
+      }
+
+      /* タイトルと情報ボタンの調整 */
+      h1 {
+        font-size: 1.3em;
+        margin-bottom: 16px;
+      }
+
+      #info-btn {
+        font-size: 12px !important;
+        padding: 6px 12px !important;
+        margin-left: 8px !important;
+      }
+
+      /* 全て解除ボタンの調整 */
+      #clear-all-btn {
+        width: 100%;
+        margin-top: 8px;
+      }
+
+      /* 装備中カスタムパーツセクションの調整は不要（既に縦並び） */
+
+      /* 比較結果の調整 */
+      #compare-content > div:first-child {
+        display: block !important;
+        grid-template-columns: none !important;
+        gap: 16px !important;
+      }
+
+      #compare-content > div:first-child > div:last-child {
+        display: block !important;
+        grid-template-columns: none !important;
+        gap: 16px !important;
+      }
+
+      #compare-content > div:first-child > div:last-child > div {
+        margin-bottom: 16px;
+      }
+
+      /* 割合入力欄の調整 */
+      .damage-ratio-container input[type="number"] {
+        width: 50px;
+      }
+
+      /* 火力指数・耐久指数表示の調整 */
+      .power-index-display,
+      .durability-index-display {
+        margin-bottom: 8px !important;
+        padding: 8px !important;
+        font-size: 14px !important;
+      }
     }
 
     .status-section {
@@ -277,345 +728,6 @@
     .compare-container td:nth-child(4) {
       color: #4CAF50;
     }
-
-    /* スマホ対応のためのメディアクエリ */
-    @media screen and (max-width: 768px) {
-      body {
-        margin: 12px;
-      }
-
-      /* メインコンテナを縦並びに変更 */
-      .main-container {
-        flex-direction: column;
-        gap: 16px;
-      }
-
-      /* 左右パネルをフルワイズに */
-      .left-panel, .right-panel {
-        width: 100%;
-        max-width: 100%;
-        min-width: auto;
-      }
-
-      /* 順序を調整: 機体情報 → カスタムパーツ → 装備パーツ */
-      .right-panel {
-        order: 1;
-      }
-
-      .left-panel {
-        order: 2;
-      }
-
-      .bottom-panel {
-        order: 3;
-      }
-
-      /* 装備グリッドを縦8つに変更 */
-      .equipped-grid {
-        grid-template-columns: 1fr;
-        grid-template-rows: repeat(8, 40px);
-        max-width: 100%;
-      }
-
-      /* パーツカテゴリーの折り畳み対応 */
-      .parts-categories {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-      }
-
-      .category-section {
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        padding: 0;
-        background: #f8f8ff;
-      }
-
-      .category-section h3 {
-        margin: 0;
-        padding: 12px 16px;
-        background: #e8e8f0;
-        border-radius: 8px 8px 0 0;
-        cursor: pointer;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        user-select: none;
-        font-size: 1em;
-        border-bottom: 1px solid #ddd;
-      }
-
-      .category-section h3::after {
-        content: '▼';
-        font-size: 12px;
-        transition: transform 0.3s ease;
-        color: #666;
-      }
-
-      .category-section.collapsed h3::after {
-        transform: rotate(-90deg);
-      }
-
-      .category-section.collapsed h3 {
-        border-radius: 8px;
-        border-bottom: none;
-      }
-
-      .category-section .parts-list {
-        display: none;
-        flex-direction: column;
-        gap: 4px;
-        padding: 12px;
-        max-height: 300px;
-        overflow-y: auto;
-  
-      }
-
-      .category-section:not(.collapsed) .parts-list {
-        display: flex;
-      }
-
-
-      
-
-      /* パーツボタンのスマホ対応 */
-      .part-btn {
-        width: 100%;
-        text-align: left;
-        padding: 12px;
-        border-radius: 6px;
-        font-size: 14px;
-        min-height: 44px; /* タップしやすいサイズ */
-        display: flex;
-        align-items: center;
-      }
-
-      .part-btn.equipped {
-        background: #ffebee;
-        border-color: #e57373;
-      }
-
-      /* 機体情報テーブルのスマホ対応 */
-      .status-section table {
-        font-size: 14px;
-      }
-
-      .status-section th, .status-section td {
-        padding: 6px 4px;
-      }
-
-      .status-section input[type="number"] {
-        width: 80px;
-        padding: 4px;
-        font-size: 14px;
-      }
-
-      /* スロットテーブルのスマホ対応 */
-      .slot-usage-table {
-        font-size: 14px;
-      }
-
-      .slot-usage-table input[type="number"] {
-        width: 50px;
-      }
-
-      /* 拡張スキル・強化段階のスマホ対応 */
-      .expansion-skill-select, .enhance-stage-select {
-        padding: 12px;
-        font-size: 14px;
-      }
-
-      .expansion-skill-select select, .enhance-stage-select select {
-        font-size: 14px;
-        padding: 4px;
-      }
-
-      /* ボタンのスマホ対応 */
-      button {
-        min-height: 44px;
-        font-size: 14px;
-        padding: 8px 12px;
-      }
-
-      #clear-all-btn {
-        margin-top: 8px;
-        width: 100%;
-      }
-
-      /* 比較・保存機能のスマホ対応 */
-      .compare-container {
-        overflow-x: auto;
-        padding: 12px;
-      }
-
-      .compare-container table {
-        min-width: 600px;
-        font-size: 12px;
-      }
-
-      .damage-ratio-container {
-        overflow-x: auto;
-        padding: 12px;
-      }
-
-      .damage-ratio-container > div {
-        min-width: 300px;
-      }
-
-      .save-load-container {
-        padding: 12px;
-      }
-
-      .save-load-container > div {
-        flex-direction: column;
-        gap: 8px;
-      }
-
-      .save-load-container > div > div {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-      }
-
-      .save-load-container input, .save-load-container select {
-        margin-bottom: 8px;
-        padding: 8px;
-        font-size: 14px;
-      }
-
-      /* モーダルのスマホ対応 */
-      .modal-content {
-        width: 95%;
-        margin: 5% auto;
-        max-height: 90vh;
-        overflow-y: auto;
-      }
-
-      /* 火力指数・耐久指数エリアのスマホ対応 */
-      .damage-ratio-container > div:first-child {
-        flex-direction: column;
-        gap: 16px;
-      }
-
-      .damage-ratio-container input[type="number"] {
-        width: 60px;
-        padding: 4px;
-      }
-
-      /* 追加効果エリアのスマホ対応 */
-      .special-effects {
-        margin-top: 16px;
-      }
-
-      .special-effect-item {
-        font-size: 14px;
-        padding: 6px;
-      }
-    }
-
-    /* mobileクラスが付いた場合の強制的なスタイル適用 */
-    body.mobile {
-      margin: 12px !important;
-    }
-
-    body.mobile .main-container {
-      flex-direction: column !important;
-      gap: 16px !important;
-    }
-
-    body.mobile .left-panel, 
-    body.mobile .right-panel {
-      width: 100% !important;
-      max-width: 100% !important;
-      min-width: auto !important;
-    }
-
-    body.mobile .right-panel {
-      order: 1 !important;
-    }
-
-    body.mobile .left-panel {
-      order: 2 !important;
-    }
-
-    body.mobile .bottom-panel {
-      order: 3 !important;
-    }
-
-    body.mobile .equipped-grid {
-      grid-template-columns: 1fr !important;
-      grid-template-rows: repeat(8, 40px) !important;
-      max-width: 100% !important;
-    }
-
-    body.mobile .category-section {
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      padding: 0;
-      background: #f8f8ff;
-    }
-
-    body.mobile .category-section h3 {
-      margin: 0;
-      padding: 12px 16px;
-      background: #e8e8f0;
-      border-radius: 8px 8px 0 0;
-      cursor: pointer;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      user-select: none;
-      font-size: 1em;
-      border-bottom: 1px solid #ddd;
-    }
-
-    body.mobile .category-section h3::after {
-      content: '▼';
-      font-size: 12px;
-      transition: transform 0.3s ease;
-      color: #666;
-    }
-
-    body.mobile .category-section.collapsed h3::after {
-      transform: rotate(-90deg);
-    }
-
-    body.mobile .category-section.collapsed h3 {
-      border-radius: 8px;
-      border-bottom: none;
-    }
-
-    body.mobile .category-section .parts-list {
-      display: none;
-      flex-direction: column;
- flex-wrap: nowrap;
-      gap: 4px;
-      padding: 12px;
-
-    }
-
-    body.mobile .category-section:not(.collapsed) .parts-list {
-      display: flex;
-    }
-
-    body.mobile .part-btn {
-      width: 100%;
-      text-align: left;
-      padding: 12px;
-      border-radius: 6px;
-      font-size: 14px;
-      min-height: 44px;
-      display: flex;
-      align-items: center;
-    }
-    /* タッチデバイス用の最適化 */
-@media (hover: none) and (pointer: coarse) {
-  .part-btn, .slot {
-    min-height: 48px; /* より大きなタップターゲット */
-  }
-}
-
-
   </style>
 </head>
 <body>
@@ -626,34 +738,8 @@
 </h1>
 
   <div class="main-container">
-    <!-- 左パネル：カスタムパーツ一覧 -->
-    <div class="left-panel">
-      <h2>カスタムパーツ一覧</h2>
-      <div class="parts-categories">
-        <div class="category-section">
-          <h3>攻撃系パーツ</h3>
-          <div class="parts-list" id="parts-list-attack"></div>
-        </div>
-        <div class="category-section">
-          <h3>防御系パーツ</h3>
-          <div class="parts-list" id="parts-list-defense"></div>
-        </div>
-        <div class="category-section">
-          <h3>移動系パーツ</h3>
-          <div class="parts-list" id="parts-list-move"></div>
-        </div>
-        <div class="category-section">
-          <h3>補助系パーツ</h3>
-          <div class="parts-list" id="parts-list-auxiliary"></div>
-        </div>
-        <div class="category-section">
-          <h3>特殊系パーツ</h3>
-          <div class="parts-list" id="parts-list-special"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 右パネル：機体情報、拡張スキル、強化段階、スロット、追加効果 -->
+    <!-- PC用：右パネル：機体情報、拡張スキル、強化段階、スロット、追加効果 -->
+    <!-- スマホ用：最初に表示される -->
     <div class="right-panel">
       <div class="status-section">
         <h2>機体情報</h2>
@@ -796,18 +882,54 @@
         </div>
       </div>
     </div>
+
+    <!-- PC用：左パネル：カスタムパーツ一覧 -->
+    <!-- スマホ用：2番目に表示される -->
+    <div class="left-panel">
+      <h2>カスタムパーツ一覧</h2>
+      <div class="parts-categories">
+        <div class="category-section">
+          <h3>攻撃系パーツ</h3>
+          <div class="category-content">
+            <div class="parts-list" id="parts-list-attack"></div>
+          </div>
+        </div>
+        <div class="category-section">
+          <h3>防御系パーツ</h3>
+          <div class="category-content">
+            <div class="parts-list" id="parts-list-defense"></div>
+          </div>
+        </div>
+        <div class="category-section">
+          <h3>移動系パーツ</h3>
+          <div class="category-content">
+            <div class="parts-list" id="parts-list-move"></div>
+          </div>
+        </div>
+        <div class="category-section">
+          <h3>補助系パーツ</h3>
+          <div class="category-content">
+            <div class="parts-list" id="parts-list-auxiliary"></div>
+          </div>
+        </div>
+        <div class="category-section">
+          <h3>特殊系パーツ</h3>
+          <div class="category-content">
+            <div class="parts-list" id="parts-list-special"></div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- 下部パネル：装備中カスタムパーツ -->
   <div class="bottom-panel">
     <div class="equipped-section">
       <h2>装備中カスタムパーツ（クリックで解除）</h2>
-      <div style="display: flex; align-items: flex-start; gap: 16px;">
-        <div class="equipped-grid" id="equipped-grid"></div>
-        <button id="clear-all-btn" style="padding: 8px 16px; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">
-          全て解除
-        </button>
-      </div>
+      <div class="equipped-grid" id="equipped-grid"></div>
+      <button id="clear-all-btn" style="padding: 8px 16px; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; margin-top: 12px; display: block;">
+        全て解除
+      </button>
     </div>
   </div>
 
@@ -815,10 +937,10 @@
   <div class="bottom-panel">
     <div class="damage-ratio-container" style="margin: 20px 0; padding: 16px; border: 1px solid #aaa; border-radius: 6px; background: #f8f8ff;">
       <h3>火力指数・耐久指数計算</h3>
-      <div style="display: flex; gap: 24px;">
+      <div class="damage-ratio-content" style="display: flex; gap: 24px;">
         <!-- 火力指数部分 -->
-        <div style="flex: 1;">
-          <div style="margin-bottom: 16px;">
+        <div class="power-section" style="flex: 1;">
+          <div class="damage-input-grid" style="margin-bottom: 16px;">
             <label style="margin-right: 16px;">
               射撃与ダメ割合：
               <input type="number" id="shooting_ratio" value="50" min="0" style="width: 60px;">
@@ -831,22 +953,19 @@
           <div class="power-index-display" style="padding: 12px; background: #fff; border: 1px solid #ddd; border-radius: 4px;">
             <div style="font-weight: bold;">火力指数：<span id="power_index">0</span></div>
           </div>
-          <button id="maximize-power-btn" style="margin-top: 8px; padding: 8px 16px; font-size: 14px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; width: 100%;">
-            火力指数最大化
-          </button>
-                  <!-- スラスター部分 -->
-        <div style="flex: 1;">
-
-          <button id="maximize-thruster-btn" style="margin-top: 8px; padding: 8px 16px; font-size: 14px; background: #FF9800; color: white; border: none; border-radius: 4px; cursor: pointer; width: 100%;">
-            スラスター最大化
-          </button>
-        </div>
-
+          <div class="power-buttons" style="margin-top: 8px;">
+            <button id="maximize-power-btn" style="padding: 8px 16px; font-size: 14px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; width: 100%;">
+              火力指数最大化
+            </button>
+            <button id="maximize-thruster-btn" style="margin-top: 4px; padding: 8px 16px; font-size: 14px; background: #FF9800; color: white; border: none; border-radius: 4px; cursor: pointer; width: 100%;">
+              スラスター最大化
+            </button>
+          </div>
         </div>
 
         <!-- 耐久指数部分 -->
-        <div style="flex: 1;">
-          <div style="margin-bottom: 16px;">
+        <div class="durability-section" style="flex: 1;">
+          <div class="durability-input-grid" style="margin-bottom: 16px;">
             <label style="margin-right: 16px;">
               実弾被ダメ割合：
               <input type="number" id="ballistic_ratio" value="1" min="0" style="width: 60px;">
@@ -869,9 +988,9 @@
         </div>
 
         <!-- 被ダメ割合プリセットボタン -->
-        <div style="width: 200px;">
+        <div class="preset-section" style="width: 200px;">
           <div style="margin-bottom: 8px; font-weight: bold;">被ダメ割合プリセット</div>
-          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px;">
+          <div class="preset-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px;">
             <button onclick="setDamageRatio(50, 10, 40)" style="padding: 4px 8px; font-size: 12px;">300</button>
             <button onclick="setDamageRatio(50, 10, 40)" style="padding: 4px 8px; font-size: 12px;">350</button>
             <button onclick="setDamageRatio(40, 10, 50)" style="padding: 4px 8px; font-size: 12px;">400</button>
@@ -972,8 +1091,9 @@
       
       <h4>操作方法</h4>
       <ul>
+        <li>まずは機体ステータスを入力してください。</li>
         <li>エンターキーで次の入力欄にいけます。シフト＋エンターで1つ戻る。</li>
-        <li><strong>パーツ装備</strong>：パーツをクリックで詳細表示、ダブルクリックで装備</li>
+        <li><strong>パーツ装備</strong>：パーツをクリックで詳細表示、ダブルクリックまたは長押しで装備</li>
         <li><strong>パーツ解除</strong>：装備中パーツをクリックで解除</li>
         <li><strong>未所持設定</strong>：パーツ詳細画面で「未所持」ボタンをクリック　未所持パーツは自動装備されなくなります。未所持設定は保存されます。</li>
         <li>パーツ詳細は画面のどこをクリックしても閉じられます。</li>
@@ -983,7 +1103,7 @@
       <p><strong>火力指数</strong>：射撃・格闘の与ダメージ割合を設定して計算されます</p>
       <p><strong>耐久指数</strong>：実弾・ビーム・格闘の被ダメージ割合を設定して計算されます</p>
       <p>「最大化」ボタンで自動的に最適なパーツを装備できます</p>
-　　　<p>※拡張装甲で空きスロットが多いと、計算にかなり時間がかかります。</p>
+      <p>※拡張装甲で空きスロットが多いと、計算にかなり時間がかかります。</p>
       
       <h4>保存・読み込み機能</h4>
       <p>機体情報を保存して後で読み込むことができます。比較機能もあるよ</p>
@@ -991,8 +1111,8 @@
 
       
       <h4>更新履歴・その他</h4>
-      <p>最終更新: 2025年5月31日</p>
-      <p>そのうちスマホ対応するかも</p>
+      <p>最終更新: 2025年8月7日</p>
+      <p>スマホでも使いやすくなりました</p>
       <p>不具合報告や要望は、XのDMまで@8LpdFhYmxHfrOV9</p>
     </div>
     <div class="modal-footer">
@@ -1005,57 +1125,6 @@
 
 
   <script>
-    // モバイルデバイス検出とクラス追加
-function detectMobile() {
-  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
-                   window.innerWidth <= 768;
-  
-  if (isMobile) {
-    document.body.classList.add('mobile');
-  } else {
-    document.body.classList.remove('mobile');
-  }
-  return isMobile;
-}
-
-// カテゴリー折り畳み機能
-function initializeCategoryCollapse() {
-  const categoryHeaders = document.querySelectorAll('.category-section h3');
-  
-  categoryHeaders.forEach(header => {
-    header.addEventListener('click', function() {
-      const section = this.parentElement;
-      section.classList.toggle('collapsed');
-    });
-  });
-  
-  // スマホの場合、初期状態で全カテゴリーを折り畳む
-  const isMobile = detectMobile();
-  if (isMobile) {
-    const categorySections = document.querySelectorAll('.category-section');
-    categorySections.forEach(section => {
-      section.classList.add('collapsed');
-    });
-  }
-}
-
-// ページ読み込み時とリサイズ時にモバイル検出を実行
-window.addEventListener('load', function() {
-  detectMobile();
-  initializeCategoryCollapse();
-});
-
-window.addEventListener('resize', function() {
-  detectMobile();
-});
-
-// DOMが読み込まれた時点で初期化
-document.addEventListener('DOMContentLoaded', function() {
-  detectMobile();
-  initializeCategoryCollapse();
-});
-
-
     // ステータス上限値（基本値）
     const BASE_LIMITS = {
       ballistic: 50,  // 耐実弾補正
@@ -1280,6 +1349,35 @@ document.addEventListener('DOMContentLoaded', function() {
           { type: "burn_damage", value: 20, text: "焼夷効果によって与えるダメージが%d%増加" },
           { type: "burn_duration", value: 10, text: "焼夷効果の継続時間が%d%増加" }
         ], category: "attackparts"
+      },
+      {
+        name: "火器管制最適化システム",
+        slot: { short: 3, middle: 1, long: 5 },
+        shooting: 2,
+        specialEffect: "ASL（自動照準補正）領域を5拡張。ビーム射撃兵装の集束時間を5%短縮し、更に敵へ与えるダメージを5%増加させる。(火力指数非対応)",
+        category: "attackparts"
+      },
+      {
+        name: "レベリングシステム［格闘］",
+        type: "レベリングシステム",
+        slot: { short: 3, middle: 1, long: 2 },
+        levelEffects: {
+          base: { fighting: 8 },
+          perLevel: { fighting: 2 },
+          maxBonus: { fighting: 16 }
+        },
+        category: "attackparts", useAttackParts: true
+      },
+      {
+        name: "レベルリンクシステム［射撃］",
+        type: "レベルリンクシステム",
+        slot: { short: 1, middle: 3, long: 3 },
+        levelEffects: {
+          base: { shooting: 8 },
+          perLevel: { shooting: 2 },
+          maxBonus: { shooting: 16 }
+        },
+        category: "attackparts", useAttackParts: true
       },
 
       // 防御パーツ
@@ -1577,6 +1675,9 @@ document.addEventListener('DOMContentLoaded', function() {
         name: "噴射制御装置 LV5",
         slot: { short: 3, middle: 3, long: 5 },
         thruster: 15,
+        specialEffects: [
+          { type: "dash_consumption", value: 5, text: "高速移動中のスラスター消費量を%d%軽減" }
+        ],
         category: "moveparts"
       },
       {
@@ -1626,9 +1727,9 @@ document.addEventListener('DOMContentLoaded', function() {
       },
       {
         name: "コンポジットモーター LV1",
-        slot: { short: 3, middle: 2, long: 5 },
-        speed: 5,
-        turn: 9,
+        slot: { short: 3, middle: 0, long: 5 },
+        speed: 7,
+        turn: 12,
         specialEffects: [
           { type: "leg_burden", value: 20, text: "ジャンプ後と高速移動後の脚部負荷を%d%軽減" }
         ],
@@ -1861,7 +1962,7 @@ document.addEventListener('DOMContentLoaded', function() {
       },
       {
         name: "フィールドモーター LV3",
-        slot: { short: 8, middle: 6, long: 1 },
+        slot: { short: 6, middle: 4, long: 1 },
         turn: 15,
         category: "auxiliaryparts"
       },
@@ -1952,17 +2053,17 @@ document.addEventListener('DOMContentLoaded', function() {
       name: "頭部特殊装甲 LV2",
       slot: { short: 0, middle: 0, long: 2 },
       specialEffects: [
-        { type: "head_hp_percent", value: 20, text: "「頭部HP」に充てられるHPを45%から65%に増加", unique: true },
-        { type: "head_damage_reduction", value: 8, text: "頭部被弾時、機体HPへのダメージを%d%軽減", unique: true }
+        { type: "head_hp_percent", value: 30, text: "「頭部HP」に充てられるHPを45%から75%に増加", unique: true },
+        { type: "head_damage_reduction", value: 12, text: "頭部被弾時、機体HPへのダメージを%d%軽減", unique: true }
       ],
       category: "specialparts"
     },
     {
       name: "頭部特殊装甲 LV3",
-      slot: { short: 0, middle: 0, long: 4 },
+      slot: { short: 0, middle: 0, long: 3 },
       specialEffects: [
-        { type: "head_hp_percent", value: 30, text: "「頭部HP」に充てられるHPを45%から75%に増加", unique: true },
-        { type: "head_damage_reduction", value: 12, text: "頭部被弾時、機体HPへのダメージを%d%軽減", unique: true }
+        { type: "head_hp_percent", value: 40, text: "「頭部HP」に充てられるHPを45%から85%に増加", unique: true },
+        { type: "head_damage_reduction", value: 15, text: "頭部被弾時、機体HPへのダメージを%d%軽減", unique: true }
       ],
       category: "specialparts"
     },
@@ -1986,10 +2087,10 @@ document.addEventListener('DOMContentLoaded', function() {
     },
     {
       name: "背部特殊装甲 LV3",
-      slot: { short: 4, middle: 0, long: 0 },
+      slot: { short: 3, middle: 0, long: 0 },
       specialEffects: [
-        { type: "back_hp_percent", value: 40, text: "「背部HP」に充てられるHPを30%から70%に増加", unique: true },
-        { type: "back_damage_reduction", value: 10, text: "背部被弾時、機体HPへのダメージを%d%軽減", unique: true }
+        { type: "back_hp_percent", value: 50, text: "「背部HP」に充てられるHPを30%から80%に増加", unique: true },
+        { type: "back_damage_reduction", value: 13, text: "背部被弾時、機体HPへのダメージを%d%軽減", unique: true }
       ],
       category: "specialparts"
     },
@@ -2037,7 +2138,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
       {
         name: "サイコフレーム",
-        slot: { short: 2, middle: 2, long: 3 },
+        slot: { short: 2, middle: 3, long: 3 },
         turn: 3,
         specialEffects: [
           { type: "lockon", value: 25, text: "サイコミュ兵装のロックオン時間が%d%短縮" },
@@ -2128,6 +2229,17 @@ document.addEventListener('DOMContentLoaded', function() {
         useAttackParts: true,
         specialEffects: [
           { type: "fighting_percent", value: 20, text: "格闘補正が%d%増加" }
+        ]
+      },
+      {
+        name: "特殊強化装置［Type-β］",
+        slot: { short: 3, middle: 3, long: 5 },
+        hp: 1000,
+        type: "特殊強化装置",
+        category: "specialparts",
+        useAttackParts: true,
+        specialEffects: [
+          { type: "shooting_percent", value: 20, text: "射撃補正が%d%増加" }
         ]
       },  
   {
@@ -2297,6 +2409,32 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     }
 
+        // 火器管制最適化システムと AD-ASL, 高精度集束リングの同時装備制限
+        if (part.name === "火器管制最適化システム" && 
+            equipped.some(e => e && (e.name.includes("AD-ASL") || e.name.includes("高精度集束リング")))) {
+          if (!equipped.includes(part)) {
+            const btn = document.createElement('button');
+            btn.className = 'part-btn';
+            btn.textContent = part.name;
+            btn.disabled = true;
+            btn.title = "AD-ASL及び高精度集束リングと同時装備できません";
+            getCategoryList(part.category).appendChild(btn);
+            return;
+          }
+        }
+        if ((part.name.includes("AD-ASL") || part.name.includes("高精度集束リング")) && 
+            equipped.some(e => e && e.name === "火器管制最適化システム")) {
+          if (!equipped.includes(part)) {
+            const btn = document.createElement('button');
+            btn.className = 'part-btn';
+            btn.textContent = part.name;
+            btn.disabled = true;
+            btn.title = "火器管制最適化システムと同時装備できません";
+            getCategoryList(part.category).appendChild(btn);
+            return;
+          }
+        }
+
         const btn = document.createElement('button');
         btn.className = 'part-btn';
         btn.textContent = part.name;
@@ -2326,26 +2464,23 @@ document.addEventListener('DOMContentLoaded', function() {
             btn.classList.add('disabled');
             btn.title = "スロット数が足りません";
           } else {
-            btn.title = "クリックで詳細表示、ダブルクリックで装備";
+            btn.title = "クリックで詳細表示、ダブルクリック・長押しで装備";
           }
+          
           let clickTimer = null;
-          btn.onclick = () => {
-            if (clickTimer === null) {
-              clickTimer = setTimeout(() => {
-                clickTimer = null;
-                openPartModal(part);
-              }, 200);
-            }
-          };
-          btn.ondblclick = () => {
-            if (!canEquipSlots) return; // 未所持でも装備可能にするため、ownedPartsのチェックを削除
-            clearTimeout(clickTimer);
-            clickTimer = null;
+          let longPressTimer = null;
+          let isLongPress = false;
+          let isScrolling = false;
+          let touchStartY = 0;
+          let touchStartX = 0;
+
+          // 装備処理関数
+          const equipPart = () => {
+            if (!canEquipSlots) return;
             let canEquip =
               !equipped.includes(part) &&
               equipped.filter(e => e).length < 8 &&
               !(part.type && equipped.some(e => e && e.type === part.type)) &&
-              // 補給パックとクイックローダー/補助ジェネレーターの同時装備制限をチェック
               !(part.type === "補給パック" && equipped.some(e => e && (e.name.includes("クイックローダー") || e.name.includes("補助ジェネレーター")))) &&
               !((part.name.includes("クイックローダー") || part.name.includes("補助ジェネレーター")) && equipped.some(e => e && e.type === "補給パック"));
             
@@ -2359,6 +2494,105 @@ document.addEventListener('DOMContentLoaded', function() {
               }
             }
           };
+
+          // クリック処理
+          btn.onclick = () => {
+            if (isLongPress) {
+              isLongPress = false;
+              return;
+            }
+            // スクロール中はクリック処理を無効化
+            if (isScrolling) {
+              return;
+            }
+            if (clickTimer === null) {
+              clickTimer = setTimeout(() => {
+                clickTimer = null;
+                openPartModal(part);
+              }, 200);
+            }
+          };
+
+          // ダブルクリック処理
+          btn.ondblclick = () => {
+            // スクロール中はダブルクリック処理を無効化
+            if (isScrolling) {
+              return;
+            }
+            clearTimeout(clickTimer);
+            clickTimer = null;
+            equipPart();
+          };
+
+          // 長押し開始（マウス・タッチ対応）
+          const startLongPress = (e) => {
+            if (e.type === 'mousedown' && e.button !== 0) return; // 左クリック以外は無視
+            
+            isLongPress = false;
+            isScrolling = false;
+            
+            // タッチ開始位置を記録（スクロール検知用）
+            if (e.type === 'touchstart' && e.touches && e.touches[0]) {
+              touchStartY = e.touches[0].clientY;
+              touchStartX = e.touches[0].clientX;
+            }
+            
+            longPressTimer = setTimeout(() => {
+              if (!isScrolling) { // スクロール中でなければ装備実行
+                isLongPress = true;
+                // 長押し成功の視覚フィードバック
+                btn.style.backgroundColor = '#c8e6c9';
+                setTimeout(() => {
+                  btn.style.backgroundColor = '';
+                }, 150);
+                equipPart();
+              }
+            }, 500); // 500ms長押し
+          };
+
+          // スクロール検知
+          const handleTouchMove = (e) => {
+            if (e.touches && e.touches[0]) {
+              const touchY = e.touches[0].clientY;
+              const touchX = e.touches[0].clientX;
+              const deltaY = Math.abs(touchY - touchStartY);
+              const deltaX = Math.abs(touchX - touchStartX);
+              
+              // 10px以上移動したらスクロールと判定
+              if (deltaY > 10 || deltaX > 10) {
+                isScrolling = true;
+                // スクロール検知時は長押しタイマーをキャンセル
+                if (longPressTimer) {
+                  clearTimeout(longPressTimer);
+                  longPressTimer = null;
+                }
+              }
+            }
+          };
+
+          // 長押し終了
+          const endLongPress = () => {
+            if (longPressTimer) {
+              clearTimeout(longPressTimer);
+              longPressTimer = null;
+            }
+            // 長押しフラグをリセット（短時間後にリセットして誤動作を防ぐ）
+            setTimeout(() => {
+              isLongPress = false;
+              isScrolling = false; // スクロール状態もリセット
+            }, 50);
+          };
+
+          // タッチイベント（スマホ対応）
+          btn.addEventListener('touchstart', startLongPress, { passive: true });
+          btn.addEventListener('touchmove', handleTouchMove, { passive: true });
+          btn.addEventListener('touchend', endLongPress, { passive: true });
+          btn.addEventListener('touchcancel', endLongPress, { passive: true });
+
+          // マウスイベント（PC対応）
+          btn.addEventListener('mousedown', startLongPress);
+          btn.addEventListener('mouseup', endLongPress);
+          btn.addEventListener('mouseleave', endLongPress);
         }
         getCategoryList(part.category).appendChild(btn);
       });
@@ -2408,8 +2642,18 @@ document.addEventListener('DOMContentLoaded', function() {
         part.specialEffects.forEach(effect => {
           let value = effect.value;
           // レベル依存の効果の場合、現在の効果量を計算
-          if (part.levelEffects && part.levelEffects.base[effect.type]) {
-            value = getPartEffect(part, effect.type);
+          let levelEffectType = effect.type;
+          // オーバーチューン装甲系パーツの場合、対応するlevelEffectsのtypeにマッピング
+          if (effect.type === 'ballistic_reduction' && part.levelEffects && part.levelEffects.base['ballistic_reduction_overtune']) {
+            levelEffectType = 'ballistic_reduction_overtune';
+          } else if (effect.type === 'beam_reduction' && part.levelEffects && part.levelEffects.base['beam_reduction_overtune']) {
+            levelEffectType = 'beam_reduction_overtune';
+          } else if (effect.type === 'melee_reduction' && part.levelEffects && part.levelEffects.base['melee_reduction_overtune']) {
+            levelEffectType = 'melee_reduction_overtune';
+          }
+          
+          if (part.levelEffects && part.levelEffects.base[levelEffectType]) {
+            value = getPartEffect(part, levelEffectType);
           }
           statsHtml += `<tr><th>追加効果</th><td>${effect.text.replace('%d', value)}</td></tr>`;
         });
@@ -2651,6 +2895,7 @@ document.addEventListener('DOMContentLoaded', function() {
       };
       let hpPercentBonus = 0;  // HPの割合増加効果を保持する変数
       let fightingPercentBonus = 0; // 格闘補正の割合増加効果を保持する変数
+      let shootingPercentBonus = 0; // 射撃補正の割合増加効果を保持する変数
       equipped.forEach(part => {
         if (part) {
           rawBonus.hp += getPartEffect(part, 'hp');
@@ -2664,7 +2909,7 @@ document.addEventListener('DOMContentLoaded', function() {
           rawBonus.thruster += getPartEffect(part, 'thruster');
           rawBonus.turn += getPartEffect(part, 'turn');
 
-          // HPと格闘補正の割合増加効果を集計
+          // HPと格闘補正と射撃補正の割合増加効果を集計
           if (part.specialEffects) {
             part.specialEffects.forEach(effect => {
               if (effect.type === 'hp_percent') {
@@ -2672,6 +2917,9 @@ document.addEventListener('DOMContentLoaded', function() {
               }
               if (effect.type === 'fighting_percent') {
                 fightingPercentBonus += effect.value;
+              }
+              if (effect.type === 'shooting_percent') {
+                shootingPercentBonus += effect.value;
               }
             });
           }
@@ -2705,6 +2953,16 @@ document.addEventListener('DOMContentLoaded', function() {
           }
           // 格闘補正の上昇値に割合増加分を加算（小数点以下切り捨て）
           bonus.fighting += Math.floor((base.fighting + expansionBonus.fighting + rawBonus.fighting) * (fightingPercentBonus / 100));
+        }
+
+        // 射撃補正の場合、割合増加を適用し、再度上限チェック
+        if (stat === 'shooting' && shootingPercentBonus > 0) {
+          total.shooting = Math.floor(total.shooting * (1 + shootingPercentBonus / 100));
+          if (limit !== null && limit !== undefined) {
+            total.shooting = Math.min(total.shooting, limit);
+          }
+          // 射撃補正の上昇値に割合増加分を加算（小数点以下切り捨て）
+          bonus.shooting += Math.floor((base.shooting + expansionBonus.shooting + rawBonus.shooting) * (shootingPercentBonus / 100));
         }
       });
       // 上限なし
@@ -2804,8 +3062,18 @@ document.addEventListener('DOMContentLoaded', function() {
               };
             }
             // レベル依存の効果の場合、現在の効果量を計算
-            if (part.levelEffects && part.levelEffects.base[effect.type]) {
-              const currentEffect = getPartEffect(part, effect.type);
+            let levelEffectType = effect.type;
+            // オーバーチューン装甲系パーツの場合、対応するlevelEffectsのtypeにマッピング
+            if (effect.type === 'ballistic_reduction' && part.levelEffects && part.levelEffects.base['ballistic_reduction_overtune']) {
+              levelEffectType = 'ballistic_reduction_overtune';
+            } else if (effect.type === 'beam_reduction' && part.levelEffects && part.levelEffects.base['beam_reduction_overtune']) {
+              levelEffectType = 'beam_reduction_overtune';
+            } else if (effect.type === 'melee_reduction' && part.levelEffects && part.levelEffects.base['melee_reduction_overtune']) {
+              levelEffectType = 'melee_reduction_overtune';
+            }
+            
+            if (part.levelEffects && part.levelEffects.base[levelEffectType]) {
+              const currentEffect = getPartEffect(part, levelEffectType);
               // 重複しない効果の場合は、より大きい値を採用
               if (effect.unique) {
                 effectTotals[effect.type].value = Math.max(effectTotals[effect.type].value, currentEffect);
@@ -2861,7 +3129,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // ダメージ増加効果とHP割合増加効果は個別に表示せず、合計値のみ表示
         if (type === 'shooting_damage' || type === 'shooting_damage_overtune' || type === 'shooting_damage_decrease' ||
             type === 'melee_damage' || type === 'melee_damage_overtune' || type === 'melee_damage_decrease' ||
-            type === 'hp_percent' || type === 'fighting_percent') {
+            type === 'hp_percent' || type === 'fighting_percent' || type === 'shooting_percent') {
           return;
         }
         const effectDiv = document.createElement('div');
@@ -2905,6 +3173,16 @@ document.addEventListener('DOMContentLoaded', function() {
           effectDiv.className = 'special-effect-item';
           effectDiv.innerHTML = `
             <div class="effect">格闘補正が${fightingPercentBonus}%増加</div>
+          `;
+          specialEffectsList.appendChild(effectDiv);
+      }
+
+      // 合計した射撃補正割合増加効果を表示
+      if (shootingPercentBonus > 0) {
+          const effectDiv = document.createElement('div');
+          effectDiv.className = 'special-effect-item';
+          effectDiv.innerHTML = `
+            <div class="effect">射撃補正が${shootingPercentBonus}%増加</div>
           `;
           specialEffectsList.appendChild(effectDiv);
       }
@@ -2991,14 +3269,29 @@ document.addEventListener('DOMContentLoaded', function() {
       equipped.forEach(part => {
         if (part && part.specialEffects) {
           part.specialEffects.forEach(effect => {
+            let value = effect.value;
+            // オーバーチューン装甲系パーツの場合、levelEffectsから効果量を取得
+            let levelEffectType = effect.type;
+            if (effect.type === 'ballistic_reduction' && part.levelEffects && part.levelEffects.base['ballistic_reduction_overtune']) {
+              levelEffectType = 'ballistic_reduction_overtune';
+            } else if (effect.type === 'beam_reduction' && part.levelEffects && part.levelEffects.base['beam_reduction_overtune']) {
+              levelEffectType = 'beam_reduction_overtune';
+            } else if (effect.type === 'melee_reduction' && part.levelEffects && part.levelEffects.base['melee_reduction_overtune']) {
+              levelEffectType = 'melee_reduction_overtune';
+            }
+            
+            if (part.levelEffects && part.levelEffects.base[levelEffectType]) {
+              value = getPartEffect(part, levelEffectType);
+            }
+            
             if (effect.type === 'ballistic_reduction') {
-              ballisticReduction += effect.value;
+              ballisticReduction += value;
             }
             if (effect.type === 'beam_reduction') {
-              beamReduction += effect.value;
+              beamReduction += value;
             }
             if (effect.type === 'melee_reduction') {
-              meleeReduction += effect.value;
+              meleeReduction += value;
             }
           });
         }
@@ -3121,9 +3414,24 @@ function calculateDurabilityIndexFast(testEquipped) {
   testEquipped.forEach(part => {
     if (part && part.specialEffects) {
       part.specialEffects.forEach(effect => {
-        if (effect.type === 'ballistic_reduction') ballisticReduction += effect.value;
-        if (effect.type === 'beam_reduction') beamReduction += effect.value;
-        if (effect.type === 'melee_reduction') meleeReduction += effect.value;
+        let value = effect.value;
+        // オーバーチューン装甲系パーツの場合、levelEffectsから効果量を取得
+        let levelEffectType = effect.type;
+        if (effect.type === 'ballistic_reduction' && part.levelEffects && part.levelEffects.base['ballistic_reduction_overtune']) {
+          levelEffectType = 'ballistic_reduction_overtune';
+        } else if (effect.type === 'beam_reduction' && part.levelEffects && part.levelEffects.base['beam_reduction_overtune']) {
+          levelEffectType = 'beam_reduction_overtune';
+        } else if (effect.type === 'melee_reduction' && part.levelEffects && part.levelEffects.base['melee_reduction_overtune']) {
+          levelEffectType = 'melee_reduction_overtune';
+        }
+        
+        if (part.levelEffects && part.levelEffects.base[levelEffectType]) {
+          value = getPartEffect(part, levelEffectType);
+        }
+        
+        if (effect.type === 'ballistic_reduction') ballisticReduction += value;
+        if (effect.type === 'beam_reduction') beamReduction += value;
+        if (effect.type === 'melee_reduction') meleeReduction += value;
       });
     }
   });
@@ -3329,6 +3637,7 @@ function calculatePowerIndexFast(testEquipped) {
   // パーツ合計
   let rawBonus = { shooting: 0, fighting: 0 };
   let fightingPercentBonus = 0;
+  let shootingPercentBonus = 0;
   testEquipped.forEach(part => {
     if (part) {
       rawBonus.shooting += getPartEffect(part, 'shooting');
@@ -3338,6 +3647,9 @@ function calculatePowerIndexFast(testEquipped) {
         part.specialEffects.forEach(effect => {
           if (effect.type === 'fighting_percent') {
             fightingPercentBonus += effect.value;
+          }
+          if (effect.type === 'shooting_percent') {
+            shootingPercentBonus += effect.value;
           }
         });
       }
@@ -3373,6 +3685,15 @@ function calculatePowerIndexFast(testEquipped) {
     total.fighting = Math.floor(total.fighting * (1 + fightingPercentBonus / 100));
     if (limit !== null && limit !== undefined) {
       total.fighting = Math.min(total.fighting, limit);
+    }
+  }
+
+  // 射撃補正の割合増加を適用
+  if (shootingPercentBonus > 0) {
+    const limit = calculateLimit('shooting');
+    total.shooting = Math.floor(total.shooting * (1 + shootingPercentBonus / 100));
+    if (limit !== null && limit !== undefined) {
+      total.shooting = Math.min(total.shooting, limit);
     }
   }
 
@@ -3554,7 +3875,32 @@ function maximizeDurabilityIndex() {
         return false;
       }
     }
-    
+        // カスタムパーツ拡張装甲が選択されている場合の追加条件
+    if (isCustomArmorSelected) {
+      // 補給パックが装備されているかをチェック
+      const hasSupplyPack = currentEquipped.some(equippedPart => 
+        equippedPart && equippedPart.name && equippedPart.name.includes("補給パック")
+      );
+      
+      if (hasSupplyPack) {
+        // 補給パックが装備されている場合、クイックローダーと補助ジェネレーターを除外
+        if (part.name.includes("クイックローダー") || part.name.includes("補助ジェネレーター")) {
+          return false;
+        }
+      }
+
+      // 火器管制最適化システムが装備されているかをチェック
+      const hasFireControlSystem = currentEquipped.some(equippedPart => 
+        equippedPart && equippedPart.name === "火器管制最適化システム"
+      );
+      
+      if (hasFireControlSystem) {
+        // 火器管制最適化システムが装備されている場合、AD-ASL及び高精度集束リングを除外
+        if (part.name.includes("AD-ASL") || part.name.includes("高精度集束リング")) {
+          return false;
+        }
+      }
+    }
     return (isBaseDefensePart || isCustomHpPart || isCustomArmorPart) && ownedParts[part.name];
   });
 
@@ -4125,7 +4471,7 @@ function maximizeDurabilityIndex() {
       ownedParts[partName] = !ownedParts[partName];
       saveOwnedParts();
     }
-// エンターキー移動（前後両方向対応、スマホ対応含む）
+// エンターキー移動（前後両方向対応）
 function setupBidirectionalEnterNavigation() {
   const allInputs = [
     'base_hp', 'base_ballistic', 'base_beam', 'base_melee',
@@ -4138,7 +4484,6 @@ function setupBidirectionalEnterNavigation() {
   allInputs.forEach((currentId, index) => {
     const currentInput = document.getElementById(currentId);
     if (currentInput) {
-      // PC用のエンターキー移動
       currentInput.addEventListener('keydown', function(event) {
         if (event.key === 'Enter') {
           event.preventDefault();
@@ -4161,194 +4506,27 @@ function setupBidirectionalEnterNavigation() {
           const targetInput = document.getElementById(allInputs[nextIndex]);
           if (targetInput) {
             targetInput.focus();
-            targetInput.select();
+            // キーボード描画後でも確実に選択されるよう 0ms 遅延（参考コードと同じ方法）
+            setTimeout(() => targetInput.select(), 0);
           }
         }
       });
-
-      // スマホ用のフォーカス移動（Enterキーでも対応）
-      currentInput.addEventListener('input', function(event) {
-        // スマホの場合、入力完了時に次の欄に移動する処理を追加可能
-      });
-      
-      // フォーカス時に全選択（スマホでも操作しやすく）
-      currentInput.addEventListener('focus', function(event) {
-        setTimeout(() => {
-          event.target.select();
-        }, 100);
-      });
     }
   });
-}
-
-// スマホ検出関数
-function isMobile() {
-  return window.innerWidth <= 768;
-}
-
-// グローバルなスクロール状態管理
-let globalIsScrolling = false;
-let globalScrollTimeout;
-
-function setupGlobalScrollDetection() {
-  document.addEventListener('scroll', function() {
-    globalIsScrolling = true;
-    clearTimeout(globalScrollTimeout);
-    globalScrollTimeout = setTimeout(function() {
-      globalIsScrolling = false;
-    }, 150);
-  }, { passive: true });
-}
-
-// カテゴリーセクションの折り畳み機能
-function setupCategoryCollapse() {
-  let touchStartY = 0;
-  let touchStartX = 0;
-  
-  const categoryHeaders = document.querySelectorAll('.category-section h3');
-  categoryHeaders.forEach(header => {
-    // タッチ開始位置を記録
-    header.addEventListener('touchstart', function(e) {
-      touchStartY = e.touches[0].clientY;
-      touchStartX = e.touches[0].clientX;
-    }, { passive: true });
-    
-    header.addEventListener('click', function(e) {
-      // スクロール中はクリックを無視
-      if (globalIsScrolling) {
-        e.preventDefault();
-        e.stopPropagation();
-        return;
-      }
-      
-      const section = this.parentElement;
-      section.classList.toggle('collapsed');
-      
-      // スマホでは自動でスクロール調整
-      if (isMobile() && !section.classList.contains('collapsed')) {
-        setTimeout(() => {
-          header.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 300);
-      }
-    });
-    
-    // タッチエンドでスクロールかタップかを判定
-    header.addEventListener('touchend', function(e) {
-      const touchEndY = e.changedTouches[0].clientY;
-      const touchEndX = e.changedTouches[0].clientX;
-      const deltaY = Math.abs(touchEndY - touchStartY);
-      const deltaX = Math.abs(touchEndX - touchStartX);
-      
-      // 移動量が大きい場合はスクロールとみなす
-      if (deltaY > 10 || deltaX > 10) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    });
-  });
-}
-
-// ダブルタップでパーツ装備（スマホ対応）
-function setupDoubleTapEquip() {
-  let lastTap = 0;
-  let touchStartY = 0;
-  let touchStartX = 0;
-  
-  // タッチ開始位置を記録
-  document.addEventListener('touchstart', function(e) {
-    touchStartY = e.touches[0].clientY;
-    touchStartX = e.touches[0].clientX;
-  }, { passive: true });
-  
-  document.addEventListener('touchend', function(event) {
-    // スクロール判定
-    const touchEndY = event.changedTouches[0].clientY;
-    const touchEndX = event.changedTouches[0].clientX;
-    const deltaY = Math.abs(touchEndY - touchStartY);
-    const deltaX = Math.abs(touchEndX - touchStartX);
-    
-    // スクロール中または移動量が大きい場合は処理をスキップ
-    if (globalIsScrolling || deltaY > 10 || deltaX > 10) {
-      return;
-    }
-    
-    const currentTime = new Date().getTime();
-    const tapLength = currentTime - lastTap;
-    
-    if (tapLength < 500 && tapLength > 0) {
-      // ダブルタップ検出
-      const target = event.target.closest('.part-btn');
-      if (target && !target.classList.contains('disabled')) {
-        event.preventDefault();
-        
-        const partName = target.textContent;
-        const part = customParts.find(p => p.name === partName);
-        if (part && ownedParts[part.name]) {
-          equipPart(part);
-          
-          // パーツ装備後、カテゴリーを自動で閉じる
-          const categorySection = target.closest('.category-section');
-          if (categorySection && isMobile()) {
-            categorySection.classList.add('collapsed');
-          }
-        }
-      }
-    }
-    lastTap = currentTime;
-  });
-}
-
-
-// 初期化時にスマホ対応機能を設定
-function initializeMobileSupport() {
-  console.log('Initializing mobile support...');
-  console.log('Is mobile:', isMobile());
-  console.log('User Agent:', navigator.userAgent);
-  console.log('Window width:', window.innerWidth);
-  
-  // グローバルスクロール検出を設定
-  setupGlobalScrollDetection();
-  
-  if (isMobile()) {
-    // スマホの場合、デフォルトでカテゴリーを閉じる
-    const categorySection = document.querySelectorAll('.category-section');
-    console.log('Found category sections:', categorySection.length);
-    categorySection.forEach((section, index) => {
-      section.classList.add('collapsed');
-      console.log('Collapsed section', index);
-    });
-    
-    // body要素にmobileクラスを追加
-    document.body.classList.add('mobile');
-  }
-  
-  setupCategoryCollapse();
-  setupDoubleTapEquip();
 }
 
 // 実行
 setupBidirectionalEnterNavigation();
 
-// DOMContentLoadedイベントでスマホ対応初期化
-document.addEventListener('DOMContentLoaded', function() {
-  initializeMobileSupport();
-});
-
-// ウィンドウリサイズ時の対応
-window.addEventListener('resize', function() {
-  if (isMobile()) {
-    // スマホサイズになった時の処理
-    const categorySection = document.querySelectorAll('.category-section:not(.collapsed)');
-    if (categorySection.length > 1) {
-      // 複数のカテゴリーが開いている場合は最初の1つ以外を閉じる
-      categorySection.forEach((section, index) => {
-        if (index > 0) {
-          section.classList.add('collapsed');
-        }
-      });
-    }
+// フォーカス時（タップ時）にも全選択（参考コードと同じ方法）
+document.addEventListener('focusin', e => {
+  const el = e.target;
+  // 数値入力欄のみ対象とする
+  if (el.tagName === 'INPUT' && el.type === 'number') {
+    setTimeout(() => el.select(), 0);
   }
 });
+
 
 // 情報モーダルの制御
 function openInfoModal() {
@@ -4373,6 +4551,115 @@ window.addEventListener('click', function(event) {
   }
 });
 
+// カテゴリー折りたたみ機能
+function setupCategoryCollapse() {
+  const categoryHeaders = document.querySelectorAll('.category-section h3');
+  
+  categoryHeaders.forEach(header => {
+    header.addEventListener('click', function() {
+      const categorySection = this.parentElement;
+      const categoryContent = categorySection.querySelector('.category-content');
+      const isMobile = window.innerWidth <= 768;
+      
+      if (isMobile) {
+        // スマホ：expandedクラスで制御
+        categorySection.classList.toggle('expanded');
+        if (categorySection.classList.contains('expanded')) {
+          categoryContent.style.maxHeight = categoryContent.scrollHeight + 'px';
+        } else {
+          categoryContent.style.maxHeight = '0';
+        }
+      } else {
+        // PC：collapsedクラスで制御
+        categorySection.classList.toggle('collapsed');
+        if (categorySection.classList.contains('collapsed')) {
+          categoryContent.style.maxHeight = '0';
+        } else {
+          categoryContent.style.maxHeight = categoryContent.scrollHeight + 'px';
+        }
+      }
+    });
+  });
+  
+  // 画面サイズに応じた初期状態を設定（初回のみ既定状態を適用）
+  setInitialCategoryState(true);
+}
+
+function setInitialCategoryState(isInitial = false) {
+  const categoryContents = document.querySelectorAll('.category-content');
+  const categorySections = document.querySelectorAll('.category-section');
+  const isMobile = window.innerWidth <= 768;
+  
+  if (isMobile) {
+    // モバイル：初回は既定で閉じる。リサイズでは現在の expanded を保持しつつ高さだけ再計算
+    if (isInitial) {
+      categorySections.forEach(section => {
+        section.classList.remove('collapsed');
+      });
+    }
+    categoryContents.forEach(content => {
+      const section = content.closest('.category-section');
+      if (section && section.classList.contains('expanded')) {
+        content.style.maxHeight = content.scrollHeight + 'px';
+      } else {
+        content.style.maxHeight = '0';
+      }
+    });
+  } else {
+    // デスクトップ：初回は既定で開く。リサイズでは現在の collapsed を保持しつつ高さだけ再計算
+    if (isInitial) {
+      categorySections.forEach(section => {
+        section.classList.remove('expanded');
+      });
+    }
+    categoryContents.forEach(content => {
+      const section = content.closest('.category-section');
+      if (section && section.classList.contains('collapsed')) {
+        content.style.maxHeight = '0';
+      } else {
+        content.style.maxHeight = content.scrollHeight + 'px';
+      }
+    });
+  }
+}
+
+// ページロード後に折りたたみ機能を初期化
+window.addEventListener('load', function() {
+  setupCategoryCollapse();
+});
+
+// 画面サイズ変更時は状態を保持して高さのみ再計算
+let __lastResizeInnerWidth = window.innerWidth;
+function __recalcCategoryHeights() {
+  const categoryContents = document.querySelectorAll('.category-content');
+  const isMobile = window.innerWidth <= 768;
+  categoryContents.forEach(content => {
+    const section = content.closest('.category-section');
+    if (isMobile) {
+      if (section && section.classList.contains('expanded')) {
+        content.style.maxHeight = content.scrollHeight + 'px';
+      } else {
+        content.style.maxHeight = '0';
+      }
+    } else {
+      if (section && section.classList.contains('collapsed')) {
+        content.style.maxHeight = '0';
+      } else {
+        content.style.maxHeight = content.scrollHeight + 'px';
+      }
+    }
+  });
+}
+window.addEventListener('resize', function() {
+  // アドレスバーの出し入れ等で innerHeight が変わっても innerWidth が同じなら状態維持
+  if (window.innerWidth !== __lastResizeInnerWidth) {
+    setInitialCategoryState(false);
+    __lastResizeInnerWidth = window.innerWidth;
+  } else {
+    __recalcCategoryHeights();
+  }
+});
+
   </script>
 </body>
 </html>
@@ -4380,3 +4667,6 @@ window.addEventListener('click', function(event) {
   </script>
 </body>
 </html>
+
+
+
